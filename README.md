@@ -2,6 +2,8 @@
 
 I know very little about github, please contact me on discord for any issues or problems at "d3a_n."
 
+This project is meant for local networks only at the moment, still working on implementing connection methods.
+
 # pear (version 1.0)
 
 Pear is an open-source, terminal-based, peer-to-peer encrypted chat platform. 

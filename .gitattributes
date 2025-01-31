@@ -1,0 +1,1 @@
+build/i2pd/libi2pd.a filter=lfs diff=lfs merge=lfs -text

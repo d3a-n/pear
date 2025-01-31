@@ -1,3 +1,0 @@
-F:/Server/pear/build/CMakeFiles/pear.dir
-F:/Server/pear/build/CMakeFiles/edit_cache.dir
-F:/Server/pear/build/CMakeFiles/rebuild_cache.dir

@@ -58,7 +58,7 @@ Pear leverages:
 - **Authentication** – **Ed25519 digital signatures**  
 - **Key Derivation** – **HKDF**  
 - **Hashing** – **BLAKE2b**  
-- **Secure PRNG** – **`randombytes_buf()`**  
+- **Secure PRNG** – **randombytes_buf**  
 
 > *Encryption is ephemeral – keys are dynamically generated and erased in memory after use.*
 

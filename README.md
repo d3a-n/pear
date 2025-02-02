@@ -1,4 +1,4 @@
-# Pear (Version 0.2)
+# Pear (Version 0.3)
 
 **Pear** is an open-source, terminal-based, decentralized, peer-to-peer encrypted chat platform.  
 It enables **fully private** communication across **Windows, Linux, and macOS** using advanced encryption and a **distributed network** with **no central servers**.  
@@ -134,21 +134,21 @@ Pear leverages:
 - **Command Line Tools**
        ```sh
        xcode-select --install
-
+       ```
 - **Required Dependencies**
        ```sh
        brew install 
        - cmake 
        - ninja 
        - libsodium
-   ```
+       ```
 
 ## Usage
 
 1. Start Pear:
        ```sh
        ./pear
-
+       ```
 2. Enter a username (alphanumeric only).
 
 3.Select a mode:

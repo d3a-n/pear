@@ -86,7 +86,6 @@ Pear leverages:
 
 ### From Binaries
 
-### **From Binaries**
 1. Visit the [GitHub Repository](https://github.com/d3a-n/pear) and download the latest release.
 2. Run the appropriate binary for your OS (or double-click the downloaded file or launch it from the terminal):
    ```sh
@@ -119,6 +118,7 @@ Pear leverages:
        - mingw-w64-x86_64-libsodium 
        - mingw-w64-x86_64-cmake
        - mingw-w64-x86_64-ninja curl
+   ```
 
 ### **Linux (Debian, Ubuntu, Fedora, Arch, etc.)**
 
@@ -127,6 +127,7 @@ Pear leverages:
        - cmake 
        - ninja-build 
        - pkg-config
+   ```
 
 ### macOS (Homebrew)
 
@@ -140,6 +141,7 @@ Pear leverages:
        - cmake 
        - ninja 
        - libsodium
+   ```
 
 ## Usage
 

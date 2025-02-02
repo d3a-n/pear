@@ -149,9 +149,10 @@ Pear leverages:
        ```sh
        ./pear
        ```
+
 2. Enter a username (alphanumeric only).
 
-3.Select a mode:
+3. Select a mode:
 
     - **Press ENTER to host a connection.**
     - **Type c to connect to a peer.**

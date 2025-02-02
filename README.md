@@ -82,6 +82,12 @@ Designed for both technical and non-technical users, Pear provides a simple inte
 4. To connect, input the host's IP address and port number when prompted.
 5. Start chatting securely.
 
+## Further Development
+
+For any questions and concerns, contact me on discord: d3a_n.
+
+I plan to include a method of connection more robust and resilient, that will be able to bypass almost any network restriction.
+
 ## License
 
 Pear is made available under the **MIT License**. For more details, see the [LICENSE.md](LICENSE.md) file in the repository.

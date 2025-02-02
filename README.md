@@ -1,75 +1,87 @@
-# pear (version 1.0)
+# Pear (Version 0.1)
 
-Pear is an open-source, terminal-based, peer-to-peer encrypted chat platform. 
-It enables secure communication across Windows, Linux, and macOS using advanced encryption protocols. 
+**Pear** is an open-source, terminal-based, peer-to-peer encrypted chat platform.
+It enables secure communication across Windows, Linux, and macOS using advanced encryption protocols.
 Designed for both technical and non-technical users, Pear provides a simple interface to facilitate private conversations without intermediaries.
 
-![screenshot](screenshots/F__Server_pear_build_pear.exe 2_2_2025 12_22_35 PM.png)
+![Screenshot](screenshots/screenshot.png)
 
-# Features
+## Features
 
-Cross-platform support: Works seamlessly on Windows, Linux, and macOS.
-End-to-end encryption: Ensures that all communications are secure and private.
-Command-line interface: Easy to use terminal-based interface.
-Multiple cryptographic protocols: Incorporates a variety of cryptographic standards to secure data.
+- **Cross-platform support**: Works seamlessly on Windows, Linux, and macOS.
+- **End-to-end encryption**: Ensures that all communications are secure and private.
+- **Command-line interface**: Easy-to-use terminal-based interface.
+- **Multiple cryptographic protocols**: Incorporates a variety of cryptographic standards to secure data.
 
-# Dependencies
+## Dependencies
 
-gcc: GNU Compiler Collection
-glibc/libc: Standard C libraries on Linux and macOS
-Microsoft C runtime libraries: Standard libraries on Windows
-POSIX Threads: Threading library for POSIX systems
-Winthreads: Threading library for Windows
-Winsock2: Networking library for Windows
-Libsodium: Modern, easy-to-use software library for encryption, decryption, signatures, password hashing and more
-CMake: Cross-platform tool to generate makefiles and project setups
+- **GCC**: GNU Compiler Collection
+- **glibc/libc**: Standard C libraries on Linux and macOS
+- **Microsoft C Runtime Libraries**: Standard libraries on Windows
+- **POSIX Threads**: Threading library for POSIX systems
+- **Winthreads**: Threading library for Windows
+- **Winsock2**: Networking library for Windows
+- **Libsodium**: Modern, easy-to-use software library for encryption, decryption, signatures, password hashing, and more
+- **CMake**: Cross-platform tool to generate makefiles and project setups
 
-Excluding windows dependencies, all are open-source.
+> *Excluding Windows dependencies, all are open-source.*
 
-# Cryptographic Libraries
+## Cryptographic Libraries
 
-Cryptographic Library: Libsodium
-Key Exchange: Curve25519 (X25519) – crypto_kx
-Symmetric Encryption: ChaCha20-Poly1305 – crypto_aead_chacha20poly1305
-Authentication: Ed25519 (Digital Signatures) – crypto_sign_ed25519
-Key Derivation: HKDF (HMAC-based Key Derivation Function) – crypto_kdf
-Hashing: BLAKE2b – crypto_generichash
-Random Number Generation: Secure PRNG – randombytes_buf
+- **Cryptographic Library**: Libsodium
+- **Key Exchange**: Curve25519 (X25519) – `crypto_kx`
+- **Symmetric Encryption**: ChaCha20-Poly1305 – `crypto_aead_chacha20poly1305`
+- **Authentication**: Ed25519 (Digital Signatures) – `crypto_sign_ed25519`
+- **Key Derivation**: HKDF (HMAC-based Key Derivation Function) – `crypto_kdf`
+- **Hashing**: BLAKE2b – `crypto_generichash`
+- **Random Number Generation**: Secure PRNG – `randombytes_buf`
 
-# Security
+## Security
 
-This program is resistant to all known methods of decryption, and quantum attacks to an extent.
-All encryption methods are open-source, no known backdoors, and no government influence.
-Keys are created dynamically and destroyed, even in memory.
-No logs are kept under ANY circumstances.
+- Resistant to all known methods of decryption, including quantum attacks to an extent.
+- All encryption methods are open-source with no known backdoors or government influence.
+- Keys are dynamically created and destroyed, even in memory.
+- **No logs are kept under ANY circumstances.**
 
-# Installation:
+## Installation
 
-From Binaries:
-    Visit the GitHub repository to download the latest release.
-    Download the appropriate binary for your system:
-        pear.exe for Windows
-        pear for Linux
-        pear.app for macOS
-    Run the application:
-        Double-click the downloaded file or launch it from the terminal by navigating to the file directory and entering ./pear.
+### From Binaries
 
-Clone the repository:
-		git clone https://github.com/d3a-n/pear
-	Navigate to the project directory:
-		cd pear
-	Compile the source code:
-		cmake .
-		make
+1. Visit the [GitHub repository](https://github.com/d3a-n/pear) to download the latest release.
+2. Download the appropriate binary for your system:
+   - `pear.exe` for Windows
+   - `pear` for Linux
+   - `pear.app` for macOS
+3. Run the application:
+   - Double-click the downloaded file or launch it from the terminal:
+     ```sh
+     ./pear
+     ```
 
-# Usage
+### Build from Source
 
-Launch the application using the terminal or command prompt.
-Enter a username when prompted. This username will be visible to others when connecting.
-Choose to host a server or connect to an existing one. 
-To connect, input the host's IP address and port number when prompted.
-Start chatting securely.
+1. Clone the repository:
+   ```sh
+   git clone https://github.com/d3a-n/pear
+   ```
+2. Navigate to the project directory:
+   ```sh
+   cd pear
+   ```
+3. Compile the source code:
+   ```sh
+   cmake .
+   make
+   ```
 
-# License
+## Usage
 
-"pear" is made available under the MIT License. For more details, see the LICENSE.md file in the repository.
+1. Launch the application using the terminal or command prompt.
+2. Enter a username when prompted. This username will be visible to others when connecting.
+3. Choose to **host a server** or **connect to an existing one**.
+4. To connect, input the host's IP address and port number when prompted.
+5. Start chatting securely.
+
+## License
+
+Pear is made available under the **MIT License**. For more details, see the [LICENSE.md](LICENSE.md) file in the repository.

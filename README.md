@@ -133,22 +133,20 @@ Pear leverages:
 
 - **Command Line Tools**
 
-       ```sh
        xcode-select --install
        ```
 
 - **Required Dependencies**
 
-       ```sh
        brew install 
        - cmake 
        - ninja 
        - libsodium
-       ```
 
 ## Usage
 
 1. Start Pear:
+
        ```sh
        ./pear
        ```

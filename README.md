@@ -90,4 +90,4 @@ I plan to include a method of connection more robust and resilient, that will be
 
 ## License
 
-Pear is made available under the **MIT License**. For more details, see the [LICENSE.md](LICENSE.md) file in the repository.
+Pear is made available under the **MIT License**. For more details, see the [LICENSE](LICENSE) file in the repository.

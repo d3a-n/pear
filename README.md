@@ -147,9 +147,7 @@ Pear leverages:
 
 1. Start Pear:
 
-       ```sh
        ./pear
-       ```
 
 2. Enter a username (alphanumeric only).
 

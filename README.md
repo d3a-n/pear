@@ -88,7 +88,7 @@ Designed for both technical and non-technical users, Pear provides a simple inte
   ```sh
   sudo apt install build-essential cmake ninja-build pkg-config
 
-## **macOS (Homebrew)**
+### **macOS (Homebrew)**
 
 - **Command Line Tools**
    ```sh

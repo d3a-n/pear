@@ -1,14 +1,10 @@
-# DISCLAIMER
-
-I know very little about github, please contact me on discord for any issues or problems at "d3a_n."
-
-This project is meant for local networks only at the moment, still working on implementing connection methods.
-
 # pear (version 1.0)
 
 Pear is an open-source, terminal-based, peer-to-peer encrypted chat platform. 
 It enables secure communication across Windows, Linux, and macOS using advanced encryption protocols. 
 Designed for both technical and non-technical users, Pear provides a simple interface to facilitate private conversations without intermediaries.
+
+![screenshot](screenshots/F__Server_pear_build_pear.exe 2_2_2025 12_22_35 PM.png)
 
 # Features
 
@@ -19,23 +15,33 @@ Multiple cryptographic protocols: Incorporates a variety of cryptographic standa
 
 # Dependencies
 
-gcc - GNU Compiler Collection
-glibc/libc - Standard C libraries on Linux and macOS
-Microsoft C runtime libraries - Standard libraries on Windows
-POSIX Threads - Threading library for POSIX systems
-Winthreads - Threading library for Windows
-Winsock2 - Networking library for Windows
-Libsodium - Modern, easy-to-use software library for encryption, decryption, signatures, password hashing and more
-CMake - Cross-platform tool to generate makefiles and project setups
+gcc: GNU Compiler Collection
+glibc/libc: Standard C libraries on Linux and macOS
+Microsoft C runtime libraries: Standard libraries on Windows
+POSIX Threads: Threading library for POSIX systems
+Winthreads: Threading library for Windows
+Winsock2: Networking library for Windows
+Libsodium: Modern, easy-to-use software library for encryption, decryption, signatures, password hashing and more
+CMake: Cross-platform tool to generate makefiles and project setups
+
+Excluding windows dependencies, all are open-source.
 
 # Cryptographic Libraries
 
+Cryptographic Library: Libsodium
 Key Exchange: Curve25519 (X25519) – crypto_kx
 Symmetric Encryption: ChaCha20-Poly1305 – crypto_aead_chacha20poly1305
 Authentication: Ed25519 (Digital Signatures) – crypto_sign_ed25519
 Key Derivation: HKDF (HMAC-based Key Derivation Function) – crypto_kdf
 Hashing: BLAKE2b – crypto_generichash
 Random Number Generation: Secure PRNG – randombytes_buf
+
+# Security
+
+This program is resistant to all known methods of decryption, and quantum attacks to an extent.
+All encryption methods are open-source, no known backdoors, and no government influence.
+Keys are created dynamically and destroyed, even in memory.
+No logs are kept under ANY circumstances.
 
 # Installation:
 

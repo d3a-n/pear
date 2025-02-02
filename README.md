@@ -110,7 +110,7 @@ Pear leverages:
 
 ## Manual Compilation Dependencies
 
-### **Windows (MSYS2)**
+### Windows (MSYS2)
 
    ```sh
        pacman -S mingw-w64-x86_64-gcc 
@@ -120,7 +120,7 @@ Pear leverages:
        - mingw-w64-x86_64-ninja curl
    ```
 
-### **Linux (Debian, Ubuntu, Fedora, Arch, etc.)**
+### Linux (Debian, Ubuntu, Fedora, Arch, etc.)
 
    ```sh
        sudo apt install build-essential 
@@ -132,10 +132,13 @@ Pear leverages:
 ### macOS (Homebrew)
 
 - **Command Line Tools**
+
        ```sh
        xcode-select --install
        ```
+
 - **Required Dependencies**
+
        ```sh
        brew install 
        - cmake 

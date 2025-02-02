@@ -74,6 +74,29 @@ Designed for both technical and non-technical users, Pear provides a simple inte
    make
    ```
 
+## Manual Compilation Dependencies
+
+### **Windows (MSYS2)**
+- **GCC** (`mingw-w64-x86_64-gcc`)
+- **pkg-config** (`mingw-w64-x86_64-pkg-config`)
+- **Libsodium** (`mingw-w64-x86_64-libsodium`)
+- **CMake**
+- **Ninja (Optional, recommended for faster builds)**
+
+### **Linux (Debian, Ubuntu, Fedora, Arch, etc.)**
+- **GCC and Build Tools**
+  ```sh
+  sudo apt install build-essential cmake ninja-build pkg-config
+
+## **macOS (Homebrew)**
+
+- **Command Line Tools**
+   ```sh
+   xcode-select --install
+- **Required Dependencies**
+   ```sh
+   brew install cmake ninja libsodium
+
 ## Usage
 
 1. Launch the application using the terminal or command prompt.
@@ -82,12 +105,6 @@ Designed for both technical and non-technical users, Pear provides a simple inte
 4. To connect, input the host's IP address and port number when prompted.
 5. Start chatting securely.
 
-## Further Development
-
-For any questions and concerns, contact me on discord: d3a_n.
-
-I plan to include a method of connection more robust and resilient, that will be able to bypass almost any network restriction.
-
 ## License
 
-Pear is made available under the **MIT License**. For more details, see the [LICENSE](LICENSE) file in the repository.
+Pear is made available under the **MIT License**. For more details, see the [LICENSE.md](LICENSE.md) file in the repository.

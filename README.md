@@ -80,8 +80,8 @@ Designed for both technical and non-technical users, Pear provides a simple inte
 - **GCC** (`mingw-w64-x86_64-gcc`)
 - **pkg-config** (`mingw-w64-x86_64-pkg-config`)
 - **Libsodium** (`mingw-w64-x86_64-libsodium`)
-- **CMake**
-- **Ninja (Optional, recommended for faster builds)**
+- **CMake** (`mingw-w64-x86_64-cmake`)
+- **Ninja (`mingw-w64-x86_64-ninja`)**
 
 ### **Linux (Debian, Ubuntu, Fedora, Arch, etc.)**
 - **GCC and Build Tools**

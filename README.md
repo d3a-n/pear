@@ -1,50 +1,30 @@
-# Pear (Version 0.3)
+# Pear (Version 0.2)
 
 **Pear** is an open-source, terminal-based, decentralized, peer-to-peer encrypted chat platform.  
 It enables **fully private** communication across **Windows, Linux, and macOS** using advanced encryption and a **distributed network** with **no central servers**.  
 
 Pear leverages:
-- **DHT-based peer discovery** (KadNode)
-- **Project Tox bootstrap nodes** for network entry
-- **UDP Hole Punching** for NAT traversal
 - **End-to-end encryption with Libsodium**
 - **Dynamic, ephemeral connection keys**
 - **Zero logs – ever.**
 
 ![Screenshot](screenshots/screenshot.png)
 
----
-
 ## Features
-
-- **Decentralized, censorship-resistant**  
+ 
 - **Zero-logging policy – no stored data**  
-- **No central servers or middlemen**  
-- **Peer discovery via Kademlia DHT (KadNode)**  
-- **Country-based nearest node selection via [country.is](https://country.is)**  
-- **Secure connections through Project Tox bootstrap nodes**  
-- **NAT traversal with UDP Hole Punching**  
+- **Secure connections through Project Tox bootstrap nodes**   
 - **Strong encryption using Libsodium**  
 - **Cross-platform: Windows, Linux, macOS**  
 - **Command-line interface for efficiency**  
 
 ---
 
-## How Pear Works
-
-1. **DHT Lookup** – Users share their encrypted connection info using a distributed hash table (**KadNode**).  
-2. **Country-Based Bootstrap** – `country.is` determines the user's country to find the nearest **Project Tox** bootstrap node.  
-3. **Peer Connection** – The client queries the **DHT** for the target user’s encrypted connection info.  
-4. **Decryption & NAT Traversal** – The client decrypts the retrieved connection details and uses **UDP Hole Punching** to connect.  
-5. **End-to-End Encrypted Messaging** – Once connected, messages are secured using **ChaCha20-Poly1305 encryption**.  
-
 ## **Dependencies**
 
 - **CMake** – Cross-platform build system  
 - **GCC or Clang** – Compiler for C  
-- **Libsodium** – Cryptography library  
-- **KadNode** – Decentralized DHT-based peer lookup  
-- **Curl** – HTTP requests for `country.is` API  
+- **Libsodium** – Cryptography library   
 - **POSIX Threads** – Threading for Linux/macOS  
 - **WinThreads** – Threading for Windows  
 - **Winsock2** – Windows networking support  
@@ -70,17 +50,6 @@ Pear leverages:
 - **No persistent storage.** Data exists only during runtime.
 - **No metadata leakage.** Encryption prevents packet analysis.
 - **No government interference.** Fully decentralized and open-source.
-
-## Decentralized Network Stack
-
-| **Component**  | **Function**  |
-|---------------|--------------|
-| **KadNode (Kademlia DHT)** | Stores & retrieves encrypted connection info |
-| **Project Tox Bootstrap Nodes** | Helps users join the network |
-| **Country.is API** | Determines closest Tox node |
-| **UDP Hole Punching** | Bypasses NAT for direct connections |
-| **Libsodium** | Encrypts all communication |
-
 
 ## Installation
 
@@ -162,25 +131,6 @@ Pear leverages:
     - **If hosting: Pear will encrypt and store your connection info in the DHT.**
 
 5. Start chatting securely.
-
----
-
-## Frequently Asked Questions
-
-### **1. How does Pear prevent tracking?**
-Pear never uses a **centralized server**. All communication is handled **peer-to-peer** using **KadNode (DHT)** and **UDP Hole Punching**.
-
-### **2. Can an attacker see my messages?**
-No. All messages are **end-to-end encrypted** using **ChaCha20-Poly1305**.
-
-### **3. Can an attacker brute-force my connection info?**
-No. **Keys are ephemeral, dynamically generated, and erased after use.**
-
-### **4. What if a peer is behind NAT?**
-Pear automatically uses **UDP Hole Punching** to establish a direct connection.
-
-### **5. How does Pear handle censorship?**
-Because Pear **does not rely on central servers**, it is **censorship-resistant**.
 
 ---
 

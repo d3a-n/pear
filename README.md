@@ -13,7 +13,7 @@ Pear leverages:
 ## Features
  
 - **Zero-logging policy – no stored data**  
-- **Secure connections through Project Tox bootstrap nodes**   
+- **Secure connections through libjuice (UPCOMING)**   
 - **Strong encryption using Libsodium**  
 - **Cross-platform: Windows, Linux, macOS**  
 - **Command-line interface for efficiency**  
@@ -127,8 +127,8 @@ Pear leverages:
 
 4. Connection process:
 
-    - **If connecting: Pear will automatically find the nearest Project Tox node and query KadNode for your peer.**
-    - **If hosting: Pear will encrypt and store your connection info in the DHT.**
+    - **If connecting: Pear will prompt you to enter a username and connect o a peer. (UPCOMING)**
+    - **If hosting: Pear will encrypt and store your connection info in a STUN server, and when retrieved will ask permission to decrypt. (UPCOMING)**
 
 5. Start chatting securely.
 

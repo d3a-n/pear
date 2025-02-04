@@ -10,6 +10,12 @@ Pear leverages:
 
 ![Screenshot](screenshots/screenshot.png)
 
+## UPCOMING
+
+1. Implementing STUN with libjuice.
+2. Combining with libressl.
+3. Using libsodium with it all for secure connections.
+
 ## Features
  
 - **Zero-logging policy – no stored data**  

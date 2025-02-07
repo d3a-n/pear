@@ -1,73 +1,192 @@
-# pear (version 0.1)
+---
 
-Pear is an open-source, terminal-based, peer-to-peer encrypted chat platform. 
-It enables secure communication across Windows, Linux, and macOS using advanced encryption protocols. 
-Designed for both technical and non-technical users, Pear provides a simple interface to facilitate private conversations without intermediaries.
+# Pear (Version 0.3)
 
-# Features
+**Pear** is an open-source, terminal-based, decentralized, peer-to-peer encrypted chat platform for one-on-one communication. It enables **fully private** conversations across **Windows, Linux, and macOS** by using advanced, ephemeral encryption with no central servers and no stored logs.
 
-Cross-platform support: Works seamlessly on Windows, Linux, and macOS.
-End-to-end encryption: Ensures that all communications are secure and private.
-Command-line interface: Easy to use terminal-based interface.
-Multiple cryptographic protocols: Incorporates a variety of cryptographic standards to secure data.
+Pear leverages:
+- **End-to-end encryption with Libsodium** – Dynamically generated, ephemeral keys for every session.
+- **Dynamic, ephemeral connection keys** – Each connection is uniquely secured.
+- **Zero logs – Ever.** – No data is stored or persisted, ensuring total privacy.
+- **Robust error handling and secure input routines** – Enhancing reliability.
+- **Multi-threaded architecture** – Simultaneous sending and receiving for real-time chat.
+- **A minimalist command-line interface** – Streamlined for one-on-one interactions.
 
-# Dependencies
+![Screenshot](screenshots/screenshot.png)
 
-gcc - GNU Compiler Collection
-glibc/libc - Standard C libraries on Linux and macOS
-Microsoft C runtime libraries - Standard libraries on Windows
-POSIX Threads - Threading library for POSIX systems
-Winthreads - Threading library for Windows
-Winsock2 - Networking library for Windows
-Libsodium - Modern, easy-to-use software library for encryption, decryption, signatures, password hashing and more
-CMake - Cross-platform tool to generate makefiles and project setups
+---
 
-Excluding windows dependencies, all are open-source.
+## Current Features
 
-# Cryptographic Libraries
+- **Zero-Logging Policy**  
+  No logs are stored on disk or retained in memory once a session ends. Sensitive data is securely wiped immediately after use.
 
-Cryptographic Library - Libsodium
-Key Exchange - Curve25519 (X25519) – crypto_kx
-Symmetric Encryption - ChaCha20-Poly1305 – crypto_aead_chacha20poly1305
-Authentication - Ed25519 (Digital Signatures) – crypto_sign_ed25519
-Key Derivation - HKDF (HMAC-based Key Derivation Function) – crypto_kdf
-Hashing - BLAKE2b – crypto_generichash
-Random Number Generation - Secure PRNG – randombytes_buf
+- **Decentralized, One-on-One Chat**  
+  Establish direct peer-to-peer connections with no central servers or intermediaries.
 
-# Security
+- **Secure Ephemeral Key Exchange**  
+  Uses Libsodium’s `crypto_kx` (Curve25519/X25519) for dynamic session key generation. Each session uses unique keys that are securely erased once the session terminates.
 
-This program is resistant to all known methods of decryption, and quantum attacks to an extent.
-All encryption methods are open-source, no known backdoors, and no government influence.
-Keys are created dynamically and destroyed, even in memory.
-No logs are kept under ANY circumstances.
+- **Strong End-to-End Encryption**  
+  Messages are encrypted using ChaCha20-Poly1305 AEAD, ensuring both confidentiality and integrity.
 
-# Installation:
+- **Robust Error Handling and Secure Input**  
+  Incorporates safe input routines (`safe_fgets`) and a helper function (`send_all`) to ensure complete, secure message transmission.
 
-From Binaries:
-    Visit the GitHub repository to download the latest release.
-    Download the appropriate binary for your system:
-        pear.exe for Windows
-        pear for Linux
-        pear.app for macOS
-    Run the application:
-        Double-click the downloaded file or launch it from the terminal by navigating to the file directory and entering ./pear.
+- **Multi-threaded Send/Receive Architecture**  
+  Dedicated threads handle sending and receiving messages concurrently for a seamless, real-time chat experience.
 
-Clone the repository:
-		git clone https://github.com/d3a-n/pear
-	Navigate to the project directory:
-		cd pear
-	Compile the source code:
-		cmake .
-		make
+- **Cross-Platform Compatibility**  
+  Fully supported on Windows, Linux, and macOS, with platform-specific handling for sockets, threading, and builds.
 
-# Usage
+- **CMake-Based Build System**  
+  A modern, cross-platform build configuration that works with current compilers.
 
-Launch the application using the terminal or command prompt.
-Enter a username when prompted. This username will be visible to others when connecting.
-Choose to host a server or connect to an existing one. 
-To connect, input the host's IP address and port number when prompted.
-Start chatting securely.
+- **Minimal Command Set**  
+  A lightweight interface with a single command (`/exit`) to gracefully terminate a session.
 
-# License
+---
 
-"pear" is made available under the MIT License. For more details, see the LICENSE.md file in the root directory.
+## Upcoming Features
+
+1. **STUN Integration with libjuice** – For improved NAT traversal.
+2. **Enhanced Cryptographic Capabilities with LibreSSL** – Additional security and interoperability.
+3. **Multi-Peer Connections** – Future support for group chats and file transfers.
+
+---
+
+## Cryptographic Usages
+
+- **Cryptographic Library:**  
+  [Libsodium](https://libsodium.gitbook.io/doc/)
+
+- **Key Exchange:**  
+  Curve25519 (X25519) via Libsodium’s `crypto_kx`.
+
+- **Symmetric Encryption:**  
+  ChaCha20-Poly1305 using Libsodium’s `crypto_aead_chacha20poly1305`.
+
+- **Authentication:**  
+  Ed25519 digital signatures via Libsodium’s `crypto_sign_ed25519`.
+
+- **Key Derivation:**  
+  HKDF (HMAC-based Key Derivation Function) via Libsodium’s `crypto_kdf`.
+
+- **Hashing:**  
+  BLAKE2b via Libsodium’s `crypto_generichash`.
+
+- **Random Number Generation:**  
+  Secure PRNG using Libsodium’s `randombytes_buf`.
+
+> *Encryption is ephemeral – keys are dynamically generated for each session and securely erased after use.*
+
+---
+
+## Security Overview
+
+### Designed for Total Privacy:
+- **No Servers:**  
+  Direct peer-to-peer connections eliminate middlemen.
+- **No Logs:**  
+  Nothing is stored on disk or retained in memory.
+- **No Persistent Storage:**  
+  Data exists only during runtime.
+- **No Metadata Leakage:**  
+  Robust encryption minimizes exposure to packet analysis.
+- **Robust Error Handling:**  
+  The program employs safe input routines and secure messaging to mitigate unexpected errors.
+- **Cross-Platform Security:**  
+  Trusted cryptographic libraries ensure security on all supported platforms.
+
+---
+
+## Installation
+
+### From Binaries
+
+1. Visit the [GitHub Repository](https://github.com/d3a-n/pear) and download the latest release.
+2. Run the appropriate binary for your OS:
+   ```sh
+   ./pear     # Linux/macOS
+   pear.exe   # Windows
+   ```
+
+### Build from Source
+
+1. Clone the repository:
+   ```sh
+   git clone https://github.com/d3a-n/pear
+   ```
+2. Navigate to the project directory:
+   ```sh
+   cd pear
+   ```
+3. Compile the source code:
+   ```sh
+   cmake -S . -B build
+   cmake --build build
+   ```
+
+---
+
+## Manual Compilation Dependencies
+
+### Windows (MSYS2)
+
+```sh
+pacman -S mingw-w64-x86_64-gcc \
+          mingw-w64-x86_64-pkg-config \
+          mingw-w64-x86_64-libsodium \
+          mingw-w64-x86_64-cmake \
+          mingw-w64-x86_64-ninja
+```
+
+### Linux (Debian, Ubuntu, Fedora, Arch, etc.)
+
+```sh
+sudo apt install build-essential cmake ninja-build pkg-config
+```
+
+### macOS (Homebrew)
+
+- **Install Command Line Tools:**
+
+   ```sh
+   xcode-select --install
+   ```
+
+- **Install Required Dependencies:**
+
+   ```sh
+   brew install cmake ninja libsodium
+   ```
+
+---
+
+## Usage
+
+1. **Start Pear:**
+   ```sh
+   ./pear
+   ```
+2. **Enter a Username**  
+   (Use only alphanumeric characters; underscores are allowed.)
+
+3. **Select a Mode:**
+   - **Host a Connection:**  
+     Press **ENTER** to host a connection. Your connection details (including a dynamically assigned port) will be displayed for sharing with your peer.
+   - **Connect to a Peer:**  
+     Type `c` to connect. You will be prompted to enter your peer's IP address and port.
+
+4. **Start Chatting Securely!**
+
+5. **Exit the Chat:**  
+   Type `/exit` at any time to gracefully terminate your session.
+
+---
+
+## License
+
+Pear is released under the **MIT License**. For more details, see the [LICENSE](LICENSE) file in the repository.
+
+---

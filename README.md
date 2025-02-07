@@ -1,5 +1,3 @@
----
-
 # Pear (Version 0.3)
 
 **Pear** is an open-source, terminal-based, decentralized, peer-to-peer encrypted chat platform for one-on-one communication.  

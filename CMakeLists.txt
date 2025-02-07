@@ -23,6 +23,7 @@ set(SRC_FILES
     src/crypto_utils.c
     src/commands.c
     src/chat.c
+    src/common.c
 )
 
 # Create the executable

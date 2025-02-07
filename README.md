@@ -1,61 +1,98 @@
-# Pear (Version 0.2)
-
-**Pear** is an open-source, terminal-based, decentralized, peer-to-peer encrypted chat platform.  
-It enables **fully private** communication across **Windows, Linux, and macOS** using advanced encryption and a **distributed network** with **no central servers**.  
-
-Pear leverages:
-- **End-to-end encryption with Libsodium**
-- **Dynamic, ephemeral connection keys**
-- **Zero logs – ever.**
-
-![Screenshot](screenshots/screenshot.png)
-
-## UPCOMING
-
-1. Implementing STUN with libjuice.
-2. Combining with libressl.
-3. Using libsodium with it all for secure connections.
-
-## Features
- 
-- **Zero-logging policy – no stored data**  
-- **Secure connections through libjuice (UPCOMING)**   
-- **Strong encryption using Libsodium**  
-- **Cross-platform: Windows, Linux, macOS**  
-- **Command-line interface for efficiency**  
+Below is the updated README reflecting all the current features of Pear:
 
 ---
 
-## **Dependencies**
+# Pear (Version 0.2)
 
-- **CMake** – Cross-platform build system  
-- **GCC or Clang** – Compiler for C  
-- **Libsodium** – Cryptography library   
-- **POSIX Threads** – Threading for Linux/macOS  
-- **WinThreads** – Threading for Windows  
-- **Winsock2** – Windows networking support  
+**Pear** is an open-source, terminal-based, decentralized, peer-to-peer encrypted chat platform for one-on-one communication.  
+It enables **fully private** conversations across **Windows, Linux, and macOS** by using advanced, ephemeral encryption with no central servers and no stored logs.
 
-> *Everything is open-source except for the Microsoft runtime libraries (Windows only).*
+Pear leverages:
+- **End-to-end encryption with Libsodium** – dynamically generated, ephemeral keys.
+- **Dynamic, ephemeral connection keys** – ensuring each session is unique.
+- **Zero logs – ever.** – no data is stored or persisted.
+- **Robust error handling and secure input routines** for improved reliability.
+- **Multi-threaded architecture** – simultaneous sending and receiving for real-time chat.
+- **A minimalist command-line interface** – streamlined for one-on-one interactions.
+
+![Screenshot](screenshots/screenshot.png)
+
+---
+
+## Current Features
+
+- **Zero-logging Policy**  
+  No logs are stored on disk or retained in memory after use. Sensitive data is securely zeroed immediately when no longer needed.
+
+- **Fully Decentralized, One-on-One Chat**  
+  Peer-to-peer connections are established directly between users—there are no central servers or intermediaries.
+
+- **Secure Ephemeral Key Exchange**  
+  Uses Libsodium’s crypto_kx (based on Curve25519) for dynamic session key generation. Keys are generated for each session and securely erased afterward.
+
+- **Strong End-to-End Encryption**  
+  Messages are encrypted with ChaCha20-Poly1305 AEAD, ensuring both confidentiality and integrity.
+
+- **Robust Error Handling and Secure Input**  
+  Improved error-checking, safe input routines (via `safe_fgets`), and a helper function (`send_all`) ensure complete message transmission and secure operations.
+
+- **Multi-threaded Send/Receive Architecture**  
+  Dedicated threads handle sending and receiving messages concurrently for a seamless chat experience.
+
+- **Cross-Platform Compatibility**  
+  Fully supported on Windows, Linux, and macOS with appropriate handling for sockets, threading, and build systems.
+
+- **CMake-Based Build System**  
+  Easy-to-use and cross-platform build configuration that supports modern compilers.
+
+- **Minimal Command Set**  
+  A lightweight interface with a single supported command (`/exit`) to gracefully end a session.
+
+---
+
+## Upcoming
+
+1. **Implementing STUN with libjuice** – for improved NAT traversal.
+2. **Combining with LibreSSL** – to enhance cryptographic capabilities.
+3. **Expanding to Multi-Peer Connections** – eventually supporting group chats and file transfers.
+
+---
 
 ## Cryptographic Security
 
-- **Key Exchange** – **Curve25519 (X25519)**  
-- **End-to-End Encryption** – **ChaCha20-Poly1305 (AEAD)**  
-- **Authentication** – **Ed25519 digital signatures**  
-- **Key Derivation** – **HKDF**  
-- **Hashing** – **BLAKE2b**  
-- **Secure PRNG** – **randombytes_buf**  
+- **Key Exchange**  
+  Ephemeral key exchange is performed using Libsodium’s crypto_kx (Curve25519) to generate unique session keys.
 
-> *Encryption is ephemeral – keys are dynamically generated and erased in memory after use.*
+- **End-to-End Encryption**  
+  Utilizes ChaCha20-Poly1305 AEAD, ensuring message confidentiality and integrity.
+
+- **Secure Memory Handling**  
+  All sensitive keys and data are securely zeroed from memory using dedicated routines once no longer needed.
+
+- **Secure Random Number Generation**  
+  Libsodium’s `randombytes_buf` provides a robust source of randomness for all cryptographic operations.
+
+> *Encryption is ephemeral – keys are dynamically generated for each session and erased immediately after use.*
+
+---
 
 ## Security
 
-### **Pear is designed for total privacy:**
-- **No servers.** No middlemen.
-- **No logs.** Not even in memory.
-- **No persistent storage.** Data exists only during runtime.
-- **No metadata leakage.** Encryption prevents packet analysis.
-- **No government interference.** Fully decentralized and open-source.
+### **Designed for Total Privacy:**
+- **No servers.**  
+  Peer-to-peer connections mean there are no middlemen.
+- **No logs.**  
+  Nothing is stored on disk or retained in memory.
+- **No persistent storage.**  
+  All data exists only during runtime.
+- **No metadata leakage.**  
+  Robust encryption prevents packet analysis.
+- **Robust Error Handling.**  
+  The program employs safe input routines and secure messaging to guard against unexpected errors.
+- **Cross-Platform Security.**  
+  Trusted cryptographic libraries ensure security across all supported platforms.
+
+---
 
 ## Installation
 
@@ -66,6 +103,7 @@ Pear leverages:
    ```sh
    ./pear     # Linux/macOS
    pear.exe   # Windows
+   ```
 
 ### Build from Source
 
@@ -79,64 +117,70 @@ Pear leverages:
    ```
 3. Compile the source code:
    ```sh
-   cmake .
-   make
+   cmake -S . -B build
+   cmake --build build
    ```
+
+---
 
 ## Manual Compilation Dependencies
 
 ### Windows (MSYS2)
 
-   ```sh
-       pacman -S mingw-w64-x86_64-gcc 
-       - mingw-w64-x86_64-pkg-config
-       - mingw-w64-x86_64-libsodium 
-       - mingw-w64-x86_64-cmake
-       - mingw-w64-x86_64-ninja curl
-   ```
+```sh
+pacman -S mingw-w64-x86_64-gcc \
+          mingw-w64-x86_64-pkg-config \
+          mingw-w64-x86_64-libsodium \
+          mingw-w64-x86_64-cmake \
+          mingw-w64-x86_64-ninja \
+          curl
+```
 
 ### Linux (Debian, Ubuntu, Fedora, Arch, etc.)
 
-   ```sh
-       sudo apt install build-essential 
-       - cmake 
-       - ninja-build 
-       - pkg-config
-   ```
+```sh
+sudo apt install build-essential cmake ninja-build pkg-config
+```
 
 ### macOS (Homebrew)
 
 - **Command Line Tools**
 
-       xcode-select --install
-       ```
+   ```sh
+   xcode-select --install
+   ```
 
 - **Required Dependencies**
 
-       brew install 
-       - cmake 
-       - ninja 
-       - libsodium
+   ```sh
+   brew install cmake ninja libsodium
+   ```
+
+---
 
 ## Usage
 
-1. Start Pear:
+1. **Start Pear:**
+   ```sh
+   ./pear
+   ```
+2. **Enter a Username**  
+   Use only alphanumeric characters (underscores are allowed).
 
-       ./pear
+3. **Select a Mode:**
+   - **Press ENTER to host a connection.**
+   - **Type `c` to connect to a peer.**
 
-2. Enter a username (alphanumeric only).
+4. **Connection Process:**
+   - **Host Mode:**  
+     Your connection details (including a dynamically assigned port) are displayed for sharing with your peer.
+   - **Client Mode:**  
+     You will be prompted to enter the peer's IP address and port.
 
-3. Select a mode:
+5. **Start Chatting Securely!**
 
-    - **Press ENTER to host a connection.**
-    - **Type c to connect to a peer.**
-
-4. Connection process:
-
-    - **If connecting: Pear will prompt you to enter a username and connect o a peer. (UPCOMING)**
-    - **If hosting: Pear will encrypt and store your connection info in a STUN server, and when retrieved will ask permission to decrypt. (UPCOMING)**
-
-5. Start chatting securely.
+6. **Exit the Chat:**  
+   Type `/exit` at any time to gracefully terminate the session.
 
 ---
 

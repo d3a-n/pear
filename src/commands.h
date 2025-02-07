@@ -3,14 +3,12 @@
 
 #include "common.h"
 
-// Processes a command entered by the user.
-// Supported commands: /help, /reconnect, /clear, and /exit.
-int process_command(ChatInfo *info, const char *input);
-
-// Displays a help message with available commands.
-void display_help();
-
-// Attempts to reconnect to the server.
-void reconnect_to_server(ChatInfo *info);
+/* 
+ * Processes commands entered by the user.
+ * Only "/exit" is supported for this minimal 1‐on‐1 chat.
+ * Returns 0 if the session should end ("/exit"), 
+ *         1 otherwise.
+ */
+int process_command(chat_info *info, const char *input);
 
 #endif // COMMANDS_H

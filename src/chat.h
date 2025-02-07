@@ -4,15 +4,18 @@
 #include "common.h"
 
 /*
- * Starts the chat session using the provided chat_info structure.
- * Spawns threads for sending and receiving messages.
+ * Launches sending and receiving threads.
  */
 void chat_session(chat_info *info);
 
-/* Thread function that continuously receives messages. */
+/*
+ * Receiving thread: reads length-prefixed ciphertext, decrypts, handles ping/pong, etc.
+ */
 void *receive_messages(void *arg);
 
-/* Thread function that continuously sends messages. */
+/*
+ * Sending thread: reads user input, processes slash commands, encrypts messages, sends them.
+ */
 void *send_messages(void *arg);
 
 #endif // CHAT_H

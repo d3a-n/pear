@@ -3,14 +3,16 @@
 
 #include "common.h"
 
-// Starts the chat session using the provided ChatInfo structure.
-// This function spawns threads for sending and receiving messages with verbose logging.
-void chat_session(ChatInfo *info);
+/*
+ * Starts the chat session using the provided chat_info structure.
+ * Spawns threads for sending and receiving messages.
+ */
+void chat_session(chat_info *info);
 
-// Thread function that continuously receives messages.
+/* Thread function that continuously receives messages. */
 void *receive_messages(void *arg);
 
-// Thread function that continuously sends messages.
+/* Thread function that continuously sends messages. */
 void *send_messages(void *arg);
 
 #endif // CHAT_H

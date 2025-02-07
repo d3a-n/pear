@@ -6,89 +6,63 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+
 #ifdef _WIN32
 #include <winsock2.h>
 #endif
 
-// Global variables for potential server administration (unused in this simple version)
-Client* client_list = NULL;
-pthread_mutex_t client_list_mutex = PTHREAD_MUTEX_INITIALIZER;
-Ban* ban_list = NULL;
-pthread_mutex_t ban_list_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-// Helper function to safely read a line from input and flush extra characters if needed.
-static int safe_fgets(char *buffer, size_t size, FILE *stream) {
-    if (fgets(buffer, size, stream) == NULL)
-        return 0;
-    if (strchr(buffer, '\n') == NULL) {
-        int ch;
-        while ((ch = getchar()) != '\n' && ch != EOF)
-            ;
-    }
-    return 1;
-}
-
-// Sets a 5-second timeout for both sending and receiving on a socket.
-void set_socket_timeouts(int sock) {
-    struct timeval timeout;
-    timeout.tv_sec = 5;       // 5 seconds timeout
-    timeout.tv_usec = 0;
-#ifdef _WIN32
-    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout)) < 0) {
-        fprintf(stderr, "[ERROR] Failed to set receive timeout.\n");
-    }
-    if (setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout)) < 0) {
-        fprintf(stderr, "[ERROR] Failed to set send timeout.\n");
-    }
-#else
-    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-        perror("[ERROR] Failed to set receive timeout");
-    }
-    if (setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
-        perror("[ERROR] Failed to set send timeout");
-    }
-#endif
-    printf("[INFO] Socket timeouts set to 5 seconds.\n");
-}
-
-void init_sockets_and_crypto() {
-    printf("[STEP] Initializing sockets and libsodium...\n");
+/* ---------------------------------------------------------------------------
+ * HELPER: Initialize sockets (on Windows) and libsodium.
+ * --------------------------------------------------------------------------- */
+static void init_sockets_and_crypto(void)
+{
+    LOG_STEP("Initializing sockets and libsodium...");
 #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) {
-        fprintf(stderr, "[ERROR] WSAStartup failed.\n");
+        LOG_ERROR("WSAStartup failed.");
         exit(EXIT_FAILURE);
     }
-    printf("[INFO] Windows Sockets initialized successfully.\n");
+    LOG_INFO("Windows Sockets initialized successfully.");
 #endif
     if (sodium_init() < 0) {
-        fprintf(stderr, "[ERROR] libsodium initialization failed.\n");
+        LOG_ERROR("libsodium initialization failed.");
         exit(EXIT_FAILURE);
     }
-    printf("[INFO] libsodium initialized successfully.\n");
+    LOG_INFO("libsodium initialized successfully.");
 }
 
-void cleanup_sockets() {
-    printf("[STEP] Cleaning up sockets...\n");
+/* ---------------------------------------------------------------------------
+ * HELPER: Cleanup sockets on Windows.
+ * --------------------------------------------------------------------------- */
+static void cleanup_sockets(void)
+{
+    LOG_STEP("Cleaning up sockets...");
 #ifdef _WIN32
     WSACleanup();
 #endif
-    printf("[INFO] Sockets cleaned up.\n");
+    LOG_INFO("Sockets cleaned up.");
 }
 
-int get_username(char *username, size_t size) {
+/* ---------------------------------------------------------------------------
+ * HELPER: Prompt for a valid username (alphanumeric + underscore).
+ * --------------------------------------------------------------------------- */
+static int get_username(char *username, size_t size)
+{
     while (1) {
-        printf("[STEP] Prompting for username...\n");
+        LOG_STEP("Prompting for username...");
         printf("Enter your username (alphanumeric and underscores only): ");
         if (!safe_fgets(username, size, stdin)) {
-            fprintf(stderr, "[ERROR] Failed to read username.\n");
+            LOG_ERROR("Failed to read username.");
             return -1;
         }
         username[strcspn(username, "\n")] = '\0';
+
         if (strlen(username) == 0) {
-            printf("[WARNING] Username cannot be empty.\n");
+            LOG_WARNING("Username cannot be empty.");
             continue;
         }
+
         int valid = 1;
         for (size_t i = 0; i < strlen(username); i++) {
             if (!isalnum((unsigned char)username[i]) && username[i] != '_') {
@@ -97,30 +71,41 @@ int get_username(char *username, size_t size) {
             }
         }
         if (!valid) {
-            printf("[WARNING] Invalid username. Only letters, digits, and underscores are allowed.\n");
+            LOG_WARNING("Invalid username. Only letters, digits, and underscores are allowed.");
             continue;
         }
-        printf("[INFO] Username accepted: %s\n", username);
+        LOG_INFO("Username accepted: %s", username);
         break;
     }
     return 0;
 }
 
-int is_valid_ip(const char *ip) {
+/* ---------------------------------------------------------------------------
+ * HELPER: Validate IPv4 string format.
+ * --------------------------------------------------------------------------- */
+static int is_valid_ip(const char *ip)
+{
     int period_count = 0;
     size_t len = strlen(ip);
     if (len < 7 || len > 15)
         return 0;
+
     for (size_t i = 0; i < len; i++) {
-        if (!isdigit((unsigned char)ip[i]) && ip[i] != '.')
+        if (!isdigit((unsigned char)ip[i]) && ip[i] != '.') {
             return 0;
-        if (ip[i] == '.')
+        }
+        if (ip[i] == '.') {
             period_count++;
+        }
     }
     return (period_count == 3);
 }
 
-int is_valid_port(const char *port_str) {
+/* ---------------------------------------------------------------------------
+ * HELPER: Validate TCP port range.
+ * --------------------------------------------------------------------------- */
+static int is_valid_port(const char *port_str)
+{
     char *endptr;
     long port = strtol(port_str, &endptr, 10);
     if (*endptr != '\0' || port < 1 || port > 65535)
@@ -128,267 +113,300 @@ int is_valid_port(const char *port_str) {
     return 1;
 }
 
-// Prompts for a valid IP address once, then repeatedly asks for a valid port.
-void get_valid_ip_and_port(char *host_ip, size_t ip_size, int *host_port) {
+/* ---------------------------------------------------------------------------
+ * HELPER: Prompt user for IP and Port.
+ * --------------------------------------------------------------------------- */
+static void prompt_for_ip_and_port(char *host_ip, size_t ip_size, int *host_port)
+{
     char port_str[10];
-    // Prompt for IP address.
     while (1) {
-        printf("[STEP] Prompting for server IP...\n");
+        LOG_STEP("Prompting for server IP...");
         printf("Enter server IP: ");
         if (!safe_fgets(host_ip, ip_size, stdin)) {
-            fprintf(stderr, "[ERROR] Failed to read server IP.\n");
+            LOG_ERROR("Failed to read server IP.");
             continue;
         }
         host_ip[strcspn(host_ip, "\n")] = '\0';
+
         if (!is_valid_ip(host_ip)) {
-            printf("[WARNING] Invalid IP format. Please try again.\n");
+            LOG_WARNING("Invalid IP format. Please try again.");
             continue;
         }
         break;
     }
-    // Prompt for port.
+
     while (1) {
-        printf("[STEP] Prompting for server port...\n");
+        LOG_STEP("Prompting for server port...");
         printf("Enter server port: ");
         if (!safe_fgets(port_str, sizeof(port_str), stdin)) {
-            fprintf(stderr, "[ERROR] Failed to read server port.\n");
+            LOG_ERROR("Failed to read server port.");
             continue;
         }
         port_str[strcspn(port_str, "\n")] = '\0';
+
         if (!is_valid_port(port_str)) {
-            printf("[WARNING] Invalid port. Please enter a number between 1 and 65535.\n");
+            LOG_WARNING("Invalid port. Please enter a number between 1 and 65535.");
             continue;
         }
         *host_port = atoi(port_str);
         break;
     }
-    printf("[INFO] Server IP and port accepted: %s:%d\n", host_ip, *host_port);
+    LOG_INFO("Server IP and port accepted: %s:%d", host_ip, *host_port);
 }
 
-void server_mode(const char *username) {
-    printf("[STEP] Starting server mode...\n");
+/* ---------------------------------------------------------------------------
+ * SERVER MODE: Bind an ephemeral port, accept one client, do key exchange, chat.
+ * --------------------------------------------------------------------------- */
+static void server_mode(const char *username)
+{
+    LOG_STEP("Starting server mode...");
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0) {
-        fprintf(stderr, "[ERROR] Could not create server socket.\n");
+        LOG_ERROR("Could not create server socket.");
         exit(EXIT_FAILURE);
     }
-    printf("[INFO] Server socket created.\n");
-    
+    LOG_INFO("Server socket created.");
+
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family      = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port        = htons(0); // Ephemeral port
-    
-    printf("[STEP] Binding server socket...\n");
-    if (bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        fprintf(stderr, "[ERROR] Binding failed.\n");
+    server_addr.sin_port        = htons(0); /* Ephemeral port. */
+
+    LOG_STEP("Binding server socket...");
+    if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        LOG_ERROR("Binding failed.");
         socket_close(server_socket);
         exit(EXIT_FAILURE);
     }
-    
+
     socklen_t addr_len = sizeof(server_addr);
-    if (getsockname(server_socket, (struct sockaddr*)&server_addr, &addr_len) == -1) {
-        fprintf(stderr, "[ERROR] getsockname failed.\n");
+    if (getsockname(server_socket, (struct sockaddr *)&server_addr, &addr_len) == -1) {
+        LOG_ERROR("getsockname failed.");
         socket_close(server_socket);
         exit(EXIT_FAILURE);
     }
     int assigned_port = ntohs(server_addr.sin_port);
-    printf("[INFO] Server socket bound to port: %d\n", assigned_port);
-    
-    // Display the server's IP using hostname resolution.
+    LOG_INFO("Server socket bound to port: %d", assigned_port);
+
+    /* Show IP using hostname resolution (if available). */
     char hostname[256];
     if (gethostname(hostname, sizeof(hostname)) == 0) {
         struct hostent *host_entry = gethostbyname(hostname);
         if (host_entry && host_entry->h_addr_list[0]) {
-            char *ip = inet_ntoa(*((struct in_addr*)host_entry->h_addr_list[0]));
-            printf("[INFO] Server running on %s:%d\n", ip, assigned_port);
+            char *ip = inet_ntoa(*(struct in_addr *)host_entry->h_addr_list[0]);
+            LOG_INFO("Server running on %s:%d", ip, assigned_port);
         }
     }
-    
-    printf("[STEP] Listening for incoming connections...\n");
-    if (listen(server_socket, 5) < 0) {
-        fprintf(stderr, "[ERROR] Listen failed.\n");
+
+    LOG_STEP("Listening for incoming connections...");
+    if (listen(server_socket, 1) < 0) {
+        LOG_ERROR("Listen failed.");
         socket_close(server_socket);
         exit(EXIT_FAILURE);
     }
-    
-    printf("[STEP] Waiting for a client to connect...\n");
+
+    LOG_STEP("Waiting for a client to connect...");
     struct sockaddr_in client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
-    int client_sock = accept(server_socket, (struct sockaddr*)&client_addr, &client_addr_len);
+    int client_sock = accept(server_socket, (struct sockaddr *)&client_addr, &client_addr_len);
     if (client_sock < 0) {
-        fprintf(stderr, "[ERROR] Accept failed.\n");
+        LOG_ERROR("Accept failed.");
         socket_close(server_socket);
         exit(EXIT_FAILURE);
     }
-    printf("[INFO] A client has connected.\n");
-    
-    ChatInfo info;
+    LOG_INFO("A client has connected.");
+
+    chat_info info;
     memset(&info, 0, sizeof(info));
     info.sock = client_sock;
     strncpy(info.local_username, username, USERNAME_SIZE - 1);
-    
-    printf("[STEP] Performing key exchange as server...\n");
+
+    LOG_STEP("Performing key exchange as server...");
     if (perform_key_exchange(client_sock, username, info.remote_username, info.rx_key, info.tx_key, 1) != 0) {
-        fprintf(stderr, "[ERROR] Key exchange failed on server side.\n");
+        LOG_ERROR("Key exchange failed on server side.");
         socket_close(client_sock);
         socket_close(server_socket);
         exit(EXIT_FAILURE);
     }
-    printf("[INFO] Key exchange successful.\n");
-    
-    printf("[STEP] Performing username handshake (server side)...\n");
+
+    /* Receive client's username. */
+    LOG_STEP("Receiving client username...");
     ssize_t n = recv(client_sock, info.remote_username, USERNAME_SIZE - 1, 0);
     if (n <= 0) {
-        fprintf(stderr, "[ERROR] Failed to receive client's username.\n");
+        LOG_ERROR("Failed to receive client's username.");
         socket_close(client_sock);
         socket_close(server_socket);
         exit(EXIT_FAILURE);
     }
     info.remote_username[n] = '\0';
-    printf("[INFO] Received client username: %s\n", info.remote_username);
-    
-    printf("[STEP] Sending server username to client...\n");
-    if (send(client_sock, username, strlen(username), 0) < 0) {
-        fprintf(stderr, "[ERROR] Failed to send server username.\n");
+    LOG_INFO("Received client username: %s", info.remote_username);
+
+    /* Send server's username back. */
+    LOG_STEP("Sending server username to client...");
+    if (send_all(client_sock, username, strlen(username), 0) < 0) {
+        LOG_ERROR("Failed to send server username.");
         socket_close(client_sock);
         socket_close(server_socket);
         exit(EXIT_FAILURE);
     }
-    
+
     char client_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
-    printf("[INFO] Client '%s' connected from IP: %s\n", info.remote_username, client_ip);
-    
-    printf("[STEP] Starting chat session with client '%s'...\n", info.remote_username);
+    LOG_INFO("Client '%s' connected from IP: %s", info.remote_username, client_ip);
+
+    LOG_STEP("Starting chat session...");
     chat_session(&info);
-    
+
     socket_close(server_socket);
-    printf("[INFO] Server mode terminated.\n");
+    LOG_INFO("Server mode terminated.");
 }
 
-void client_mode(const char *username) {
-    printf("[STEP] Starting client mode...\n");
+/* ---------------------------------------------------------------------------
+ * CLIENT MODE: Prompt user for IP/Port, connect to server, do key exchange, chat.
+ * --------------------------------------------------------------------------- */
+static void client_mode(const char *username)
+{
+    LOG_STEP("Starting client mode...");
     char server_ip[256];
     int server_port;
-    get_valid_ip_and_port(server_ip, sizeof(server_ip), &server_port);
-    
+    prompt_for_ip_and_port(server_ip, sizeof(server_ip), &server_port);
+
     int client_socket;
     while (1) {
-        printf("[STEP] Creating client socket...\n");
+        LOG_STEP("Creating client socket...");
         client_socket = socket(AF_INET, SOCK_STREAM, 0);
         if (client_socket < 0) {
-            fprintf(stderr, "[ERROR] Could not create client socket.\n");
+            LOG_ERROR("Could not create client socket.");
             exit(EXIT_FAILURE);
         }
-    
+
         struct sockaddr_in server_addr;
         memset(&server_addr, 0, sizeof(server_addr));
         server_addr.sin_family = AF_INET;
         server_addr.sin_port   = htons(server_port);
+
         if (inet_pton(AF_INET, server_ip, &server_addr.sin_addr) <= 0) {
-            fprintf(stderr, "[ERROR] Invalid server IP address.\n");
+            LOG_ERROR("Invalid server IP address.");
             socket_close(client_socket);
             exit(EXIT_FAILURE);
         }
-    
-        printf("[STEP] Attempting to connect to server %s:%d...\n", server_ip, server_port);
-        if (connect(client_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == 0) {
-            printf("[INFO] Successfully connected to server.\n");
+
+        LOG_STEP("Attempting to connect to server %s:%d...", server_ip, server_port);
+        if (connect(client_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) == 0) {
+            LOG_INFO("Successfully connected to server.");
             break;
         } else {
+            /* If connection fails, allow user to retry or re‐enter IP/Port. */
             socket_close(client_socket);
+
             char choice[10];
             while (1) {
                 printf("[INPUT] Type 'r' to retry or 'n' to re-enter IP/port: ");
                 if (!safe_fgets(choice, sizeof(choice), stdin)) {
-                    fprintf(stderr, "[ERROR] Failed to read input.\n");
+                    LOG_ERROR("Failed to read input.");
                     continue;
                 }
                 choice[strcspn(choice, "\n")] = '\0';
+
                 if (strlen(choice) == 1 && tolower((unsigned char)choice[0]) == 'r') {
-                    printf("[INFO] Retrying connection...\n");
+                    LOG_INFO("Retrying connection...");
                     break;
                 } else if (strlen(choice) == 1 && tolower((unsigned char)choice[0]) == 'n') {
-                    printf("[INFO] Re-entering IP/port...\n");
-                    get_valid_ip_and_port(server_ip, sizeof(server_ip), &server_port);
+                    LOG_INFO("Re-entering IP/port...");
+                    prompt_for_ip_and_port(server_ip, sizeof(server_ip), &server_port);
                     break;
                 } else {
-                    printf("[WARNING] Invalid input. Please try again.\n");
+                    LOG_WARNING("Invalid input. Please try again.");
                 }
+            }
+            /* If user typed 'r', loop tries again immediately.
+               If 'n', we prompt for IP/port again, then loop continues. */
+            if (tolower((unsigned char)choice[0]) == 'r') {
+                continue;
+            } else {
+                continue;
             }
         }
     }
-    
-    ChatInfo info;
+
+    chat_info info;
     memset(&info, 0, sizeof(info));
     info.sock = client_socket;
     strncpy(info.local_username, username, USERNAME_SIZE - 1);
-    
-    printf("[STEP] Performing key exchange as client...\n");
+
+    LOG_STEP("Performing key exchange as client...");
     if (perform_key_exchange(client_socket, username, info.remote_username, info.rx_key, info.tx_key, 0) != 0) {
-        fprintf(stderr, "[ERROR] Key exchange failed on client side.\n");
+        LOG_ERROR("Key exchange failed on client side.");
         socket_close(client_socket);
         exit(EXIT_FAILURE);
     }
-    printf("[INFO] Key exchange successful.\n");
-    
-    printf("[STEP] Sending client username to server...\n");
-    if (send(client_socket, username, strlen(username), 0) < 0) {
-        fprintf(stderr, "[ERROR] Failed to send client username.\n");
+
+    /* Send client's username to server. */
+    LOG_STEP("Sending client username to server...");
+    if (send_all(client_socket, username, strlen(username), 0) < 0) {
+        LOG_ERROR("Failed to send client username.");
         socket_close(client_socket);
         exit(EXIT_FAILURE);
     }
-    
+
+    /* Receive server's username. */
     ssize_t n = recv(client_socket, info.remote_username, USERNAME_SIZE - 1, 0);
     if (n <= 0) {
-        fprintf(stderr, "[ERROR] Failed to receive server username.\n");
+        LOG_ERROR("Failed to receive server username.");
         socket_close(client_socket);
         exit(EXIT_FAILURE);
     }
     info.remote_username[n] = '\0';
-    printf("[INFO] Received server username: %s\n", info.remote_username);
-    
-    printf("[STEP] Starting chat session with server '%s'...\n", info.remote_username);
+    LOG_INFO("Received server username: %s", info.remote_username);
+
+    LOG_STEP("Starting chat session...");
     chat_session(&info);
-    
-    printf("[INFO] Client mode terminated.\n");
+
+    LOG_INFO("Client mode terminated.");
 }
 
-int main() {
-    printf("[STEP] Application starting...\n");
+/* ---------------------------------------------------------------------------
+ * MAIN: Prompts for username, then for server/client mode, starts accordingly.
+ * --------------------------------------------------------------------------- */
+int main(void)
+{
+    LOG_STEP("Application starting...");
     init_sockets_and_crypto();
-    
+
     char username[USERNAME_SIZE];
     if (get_username(username, sizeof(username)) != 0) {
         cleanup_sockets();
         exit(EXIT_FAILURE);
     }
-    
+
     char choice[10];
     while (1) {
-        printf("[STEP] Prompting for mode selection...\n");
+        LOG_STEP("Prompting for mode selection...");
         printf("Press 'c' to connect as client, or press ENTER to run as server: ");
         if (!safe_fgets(choice, sizeof(choice), stdin)) {
-            fprintf(stderr, "[ERROR] Failed to read mode selection.\n");
+            LOG_ERROR("Failed to read mode selection.");
             continue;
         }
         choice[strcspn(choice, "\n")] = '\0';
-        if ((strlen(choice) == 0) || (strlen(choice) == 1 && tolower((unsigned char)choice[0]) == 'c')) {
+
+        /* If user presses ENTER => server mode; if 'c' => client mode. */
+        if ((strlen(choice) == 0) || 
+            (strlen(choice) == 1 && tolower((unsigned char)choice[0]) == 'c'))
+        {
             break;
         } else {
-            printf("[WARNING] Invalid input. Please press 'c' for client or ENTER for server.\n");
+            LOG_WARNING("Invalid input. Press 'c' for client or ENTER for server.");
         }
     }
-    
+
     if (strlen(choice) == 1 && tolower((unsigned char)choice[0]) == 'c') {
         client_mode(username);
     } else {
         server_mode(username);
     }
-    
+
     cleanup_sockets();
-    printf("[STEP] Application terminating.\n");
+    LOG_STEP("Application terminating.");
     return 0;
 }

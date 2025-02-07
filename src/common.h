@@ -20,14 +20,19 @@
 #include <errno.h>
 #include <sodium.h>
 
-#define BUFFER_SIZE 1024
-#define USERNAME_SIZE 50
-#define MAX_PORT 65535
-#define MIN_PORT 1
+/* ---------------------------------------------------------------------------
+ * LOGGING MACROS
+ * --------------------------------------------------------------------------- */
+#define LOG_STEP(fmt, ...)    fprintf(stdout, "[STEP] " fmt "\n", ##__VA_ARGS__)
+#define LOG_INFO(fmt, ...)    fprintf(stdout, "[INFO] " fmt "\n", ##__VA_ARGS__)
+#define LOG_WARNING(fmt, ...) fprintf(stdout, "[WARNING] " fmt "\n", ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...)   fprintf(stderr, "[ERROR] " fmt "\n", ##__VA_ARGS__)
 
-#define ERR_SOCKET_CREATION -1
-#define ERR_SOCKET_BINDING  -2
-#define ERR_LISTENING       -3
+/* ---------------------------------------------------------------------------
+ * CONSTANTS & DEFINES
+ * --------------------------------------------------------------------------- */
+#define BUFFER_SIZE    1024
+#define USERNAME_SIZE  50
 
 #ifdef _WIN32
   #define socket_close(s) closesocket(s)
@@ -35,36 +40,27 @@
   #define socket_close(s) close(s)
 #endif
 
-// Structure representing a chat session.
-typedef struct ChatInfo {
-    int sock;
+/* ---------------------------------------------------------------------------
+ * DATA STRUCTURES
+ * --------------------------------------------------------------------------- */
+/* Represents a single peer-to-peer chat session. */
+typedef struct chat_info {
+    int  sock;
     unsigned char rx_key[crypto_kx_SESSIONKEYBYTES];
     unsigned char tx_key[crypto_kx_SESSIONKEYBYTES];
     char local_username[USERNAME_SIZE];
     char remote_username[USERNAME_SIZE];
     char last_host_ip[256];
-    int last_host_port;
-} ChatInfo;
+    int  last_host_port;
+} chat_info;
 
-// Structure representing a connected client (for potential future multi-client use).
-typedef struct Client {
-    int sock;
-    char username[USERNAME_SIZE];
-    struct sockaddr_in addr;
-    int muted; // Currently unused; reserved for future use.
-    struct Client* next;
-} Client;
+/* ---------------------------------------------------------------------------
+ * FUNCTION PROTOTYPES
+ * --------------------------------------------------------------------------- */
+/* Sends all data in 'buf' reliably, handling partial sends. */
+ssize_t send_all(int sock, const void *buf, size_t len, int flags);
 
-// Structure representing a banned user.
-typedef struct Ban {
-    char username[USERNAME_SIZE];
-    struct Ban* next;
-} Ban;
-
-extern Client* client_list;
-extern pthread_mutex_t client_list_mutex;
-
-extern Ban* ban_list;
-extern pthread_mutex_t ban_list_mutex;
+/* Safely reads a line from 'stream' into 'buffer'. */
+int safe_fgets(char *buffer, size_t size, FILE *stream);
 
 #endif // COMMON_H

@@ -1,6 +1,6 @@
 # Pear (Version 0.4)
 
-**Pear** is an open-source, terminal-based, decentralized, peer-to-peer encrypted chat platform for one-on-one communication. It enables **fully private** conversations across **Windows, Linux, and macOS** by using advanced, ephemeral encryption with no central servers and no stored logs.
+**Pear** is an open-source, terminal-based, independent, peer-to-peer encrypted chat platform for one-on-one communication. It enables **fully private** conversations across **Windows, Linux, and macOS** (Linux and MacOSplanned for future) by using advanced, ephemeral encryption with no central servers and no stored logs.
 
 Pear leverages:
 - **End-to-end encryption with Libsodium** – Dynamically generated, ephemeral keys for every session.

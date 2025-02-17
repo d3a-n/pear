@@ -24,6 +24,8 @@ set(SRC_FILES
     src/commands.c
     src/chat.c
     src/common.c
+    src/nat_traversal.c
+    src/stun_utils.c
 )
 
 # Create the executable.

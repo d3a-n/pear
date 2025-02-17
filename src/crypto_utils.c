@@ -1,3 +1,10 @@
+/******************************************************************************
+ * crypto_utils.c
+ *
+ * Contains the ephemeral key exchange as well as message encryption and
+ * decryption functions.
+ ******************************************************************************/
+
 #include "crypto_utils.h"
 #include <string.h>
 
@@ -11,6 +18,7 @@ static void debug_print_hex(const char *label, const unsigned char *data, size_t
 }
 #endif
 
+// Helper function to read exactly "length" bytes from the socket.
 static ssize_t read_exact(int sock, void *buffer, size_t length) {
     size_t total = 0;
     unsigned char *buf = (unsigned char *)buffer;
@@ -26,7 +34,9 @@ static ssize_t read_exact(int sock, void *buffer, size_t length) {
     return (ssize_t)total;
 }
 
-/* dual_dh: computes two DH operations and hashes them into a master secret */
+/* dual_dh: Computes two Diffie-Hellman operations and hashes their
+ * concatenation into a master secret.
+ */
 static int dual_dh(const unsigned char *local_sk1, const unsigned char *local_sk2,
                    const unsigned char *remote_pk1, const unsigned char *remote_pk2,
                    unsigned char *master_secret)
@@ -58,6 +68,21 @@ static int dual_dh(const unsigned char *local_sk1, const unsigned char *local_sk
     return 0;
 }
 
+/*
+ * perform_key_exchange:
+ *
+ * Modified to also exchange usernames along with the two ephemeral public keys.
+ * The message format is as follows:
+ *
+ *   +----------------------+--------------------------+-------------------------+-------------------------+
+ *   | 1 byte (uname_len)   | USERNAME_SIZE bytes      | 32 bytes (eph1_pk)      | 32 bytes (eph2_pk)      |
+ *   +----------------------+--------------------------+-------------------------+-------------------------+
+ *
+ * Total size = 1 + USERNAME_SIZE + (2 * crypto_box_PUBLICKEYBYTES)
+ *
+ * The function sends this message and then waits to receive a similar message
+ * from the remote peer. The remote username is extracted and stored in remote_username.
+ */
 int perform_key_exchange(int sock,
                          const char *local_username,
                          char *remote_username,
@@ -65,8 +90,8 @@ int perform_key_exchange(int sock,
                          unsigned char *tx_key,
                          int is_server)
 {
-    (void)local_username;
-    (void)remote_username;
+    // Define total message size for key exchange.
+    #define KEY_EXCHANGE_MSG_SIZE (1 + USERNAME_SIZE + (crypto_box_PUBLICKEYBYTES * 2))
 
     LOG_STEP("Generating two ephemeral key pairs...");
     unsigned char eph1_pk[crypto_box_PUBLICKEYBYTES];
@@ -84,25 +109,50 @@ int perform_key_exchange(int sock,
         return -1;
     }
 
-    LOG_STEP("Sending ephemeral public keys to peer...");
-    unsigned char send_buffer[crypto_box_PUBLICKEYBYTES * 2];
-    memcpy(send_buffer, eph1_pk, crypto_box_PUBLICKEYBYTES);
-    memcpy(send_buffer + crypto_box_PUBLICKEYBYTES, eph2_pk, crypto_box_PUBLICKEYBYTES);
-    if (send_all(sock, send_buffer, sizeof(send_buffer), 0) < 0) {
-        LOG_ERROR("Failed to send ephemeral public keys.");
+    // Build the outgoing key exchange message.
+    unsigned char send_buffer[KEY_EXCHANGE_MSG_SIZE];
+    size_t username_len = strlen(local_username);
+    if (username_len > USERNAME_SIZE)
+        username_len = USERNAME_SIZE; // ensure it does not exceed maximum
+
+    // Store the username length as the first byte.
+    send_buffer[0] = (uint8_t)username_len;
+
+    // Copy the username into a fixed-size field (pad with zeros if needed).
+    memset(send_buffer + 1, 0, USERNAME_SIZE);
+    memcpy(send_buffer + 1, local_username, username_len);
+
+    // Append the two ephemeral public keys.
+    memcpy(send_buffer + 1 + USERNAME_SIZE, eph1_pk, crypto_box_PUBLICKEYBYTES);
+    memcpy(send_buffer + 1 + USERNAME_SIZE + crypto_box_PUBLICKEYBYTES,
+           eph2_pk, crypto_box_PUBLICKEYBYTES);
+
+    LOG_STEP("Sending key exchange message (username + ephemeral keys) to peer...");
+    if (send_all(sock, send_buffer, KEY_EXCHANGE_MSG_SIZE, 0) < 0) {
+        LOG_ERROR("Failed to send key exchange message.");
         goto fail;
     }
 
-    LOG_STEP("Receiving ephemeral public keys from peer...");
-    unsigned char recv_buffer[crypto_box_PUBLICKEYBYTES * 2];
-    if (read_exact(sock, recv_buffer, sizeof(recv_buffer)) < (ssize_t)sizeof(recv_buffer)) {
-        LOG_ERROR("Failed to receive remote ephemeral public keys.");
+    LOG_STEP("Receiving key exchange message from peer...");
+    unsigned char recv_buffer[KEY_EXCHANGE_MSG_SIZE];
+    if (read_exact(sock, recv_buffer, KEY_EXCHANGE_MSG_SIZE) < (ssize_t)KEY_EXCHANGE_MSG_SIZE) {
+        LOG_ERROR("Failed to receive remote key exchange message.");
         goto fail;
     }
+
+    // Extract the remote username.
+    uint8_t remote_username_len = recv_buffer[0];
+    if (remote_username_len > USERNAME_SIZE)
+        remote_username_len = USERNAME_SIZE;
+    memcpy(remote_username, recv_buffer + 1, remote_username_len);
+    remote_username[remote_username_len] = '\0'; // Ensure null-termination
+
+    // Extract the ephemeral public keys from the received message.
     unsigned char remote_pk1[crypto_box_PUBLICKEYBYTES];
     unsigned char remote_pk2[crypto_box_PUBLICKEYBYTES];
-    memcpy(remote_pk1, recv_buffer, crypto_box_PUBLICKEYBYTES);
-    memcpy(remote_pk2, recv_buffer + crypto_box_PUBLICKEYBYTES, crypto_box_PUBLICKEYBYTES);
+    memcpy(remote_pk1, recv_buffer + 1 + USERNAME_SIZE, crypto_box_PUBLICKEYBYTES);
+    memcpy(remote_pk2, recv_buffer + 1 + USERNAME_SIZE + crypto_box_PUBLICKEYBYTES,
+           crypto_box_PUBLICKEYBYTES);
 
     LOG_STEP("Performing dual DH computations...");
     unsigned char master_secret[32];
@@ -112,9 +162,11 @@ int perform_key_exchange(int sock,
     }
 
     if (is_server) {
+        // Server: rx_key = H(master_secret, "c2s"), tx_key = H(master_secret, "s2c")
         crypto_generichash(rx_key, 32, master_secret, 32, (const unsigned char *)"c2s", 3);
         crypto_generichash(tx_key, 32, master_secret, 32, (const unsigned char *)"s2c", 3);
     } else {
+        // Client: tx_key = H(master_secret, "c2s"), rx_key = H(master_secret, "s2c")
         crypto_generichash(tx_key, 32, master_secret, 32, (const unsigned char *)"c2s", 3);
         crypto_generichash(rx_key, 32, master_secret, 32, (const unsigned char *)"s2c", 3);
     }
@@ -128,6 +180,7 @@ int perform_key_exchange(int sock,
     secure_memzero(eph2_sk, sizeof(eph2_sk));
     secure_memzero(master_secret, sizeof(master_secret));
     return 0;
+
 fail:
     secure_memzero(eph1_sk, sizeof(eph1_sk));
     secure_memzero(eph2_sk, sizeof(eph2_sk));

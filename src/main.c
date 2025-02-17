@@ -1,65 +1,43 @@
-#include "common.h"
-#include "crypto_utils.h"
-#include "chat.h"
-#include "commands.h"
+/******************************************************************************
+ * main.c
+ *
+ * Pear (UDP + NAT Traversal Version)
+ *
+ * This version uses:
+ *   1. STUN to discover your public IP/port and (optionally) detect NAT type.
+ *   2. UDP hole punching to connect peers behind NATs.
+ *   3. An ephemeral key exchange over UDP.
+ *   4. An encrypted chat session using ChaCha20-Poly1305 once the connection is made.
+ *
+ * Note: Make sure you have updated nat_traversal.h (see above) so that it includes
+ * the proper headers on Windows.
+ ******************************************************************************/
+
+#include "common.h"        // Common definitions, logging macros, etc.
+#include "chat.h"          // chat_session(...) for sending/receiving threads
+#include "crypto_utils.h"  // perform_key_exchange(...), encrypt/decrypt logic
+#include "commands.h"      // process_command(...) and slash commands
+#include "nat_traversal.h" // nat_get_public_info(...), hole_punch_udp(...)
+#include "stun_utils.h"    // Your STUN Binding Request code (if separate)
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-
 #ifdef _WIN32
-#include <winsock2.h>
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+  #define close closesocket
 #endif
-
-static void init_sockets_and_crypto(void);
-static void cleanup_sockets(void);
-static int get_username(char *username, size_t size);
-static void server_mode(const char *username);
-static void client_mode(const char *username);
-
-/* ---------------------------------------------------------------------------
- * MAIN
- * --------------------------------------------------------------------------- */
-int main(void) {
-    LOG_STEP("Application starting...");
-    init_sockets_and_crypto();
-
-    char username[USERNAME_SIZE];
-    if (get_username(username, sizeof(username)) != 0) {
-        cleanup_sockets();
-        exit(EXIT_FAILURE);
-    }
-
-    char choice[10];
-    while (1) {
-        LOG_STEP("Prompting for mode selection...");
-        printf("Press 'c' to connect as client, or ENTER to run as server: ");
-        if (!safe_fgets(choice, sizeof(choice), stdin)) {
-            LOG_ERROR("Failed to read mode selection.");
-            continue;
-        }
-        choice[strcspn(choice, "\n")] = '\0';
-        if (strlen(choice) == 0 || (strlen(choice) == 1 && tolower((unsigned char)choice[0]) == 'c')) {
-            break;
-        } else {
-            LOG_WARNING("Invalid input. Press 'c' (client) or ENTER (server).");
-        }
-    }
-
-    if (strlen(choice) == 1 && tolower((unsigned char)choice[0]) == 'c') {
-        client_mode(username);
-    } else {
-        server_mode(username);
-    }
-
-    cleanup_sockets();
-    LOG_STEP("Application terminating.");
-    return 0;
-}
 
 /* ---------------------------------------------------------------------------
  * UTILITY FUNCTIONS
  * --------------------------------------------------------------------------- */
+
+/*
+ * init_sockets_and_crypto:
+ *   Initializes sockets (WSAStartup on Windows) and libsodium.
+ */
 static void init_sockets_and_crypto(void) {
     LOG_STEP("Initializing sockets and libsodium...");
 #ifdef _WIN32
@@ -77,6 +55,10 @@ static void init_sockets_and_crypto(void) {
     LOG_INFO("libsodium initialized successfully.");
 }
 
+/*
+ * cleanup_sockets:
+ *   Cleans up sockets (WSACleanup on Windows).
+ */
 static void cleanup_sockets(void) {
     LOG_STEP("Cleaning up sockets...");
 #ifdef _WIN32
@@ -85,6 +67,10 @@ static void cleanup_sockets(void) {
     LOG_INFO("Sockets cleaned up.");
 }
 
+/*
+ * get_username:
+ *   Prompts the user for a valid username (alphanumeric or underscore).
+ */
 static int get_username(char *username, size_t size) {
     while (1) {
         LOG_STEP("Prompting for username...");
@@ -116,6 +102,10 @@ static int get_username(char *username, size_t size) {
     return 0;
 }
 
+/*
+ * is_valid_ip / is_valid_port:
+ *   Validate user input for IP and port.
+ */
 static int is_valid_ip(const char *ip) {
     int period_count = 0;
     size_t len = strlen(ip);
@@ -137,13 +127,17 @@ static int is_valid_port(const char *port_str) {
     return 1;
 }
 
+/*
+ * prompt_for_ip_and_port:
+ *   Prompts the user to enter a peer IP and port.
+ */
 static void prompt_for_ip_and_port(char *host_ip, size_t ip_size, int *host_port) {
     char port_str[10];
     while (1) {
-        LOG_STEP("Prompting for server IP...");
-        printf("Enter server IP: ");
+        LOG_STEP("Prompting for peer IP...");
+        printf("Enter peer IP: ");
         if (!safe_fgets(host_ip, ip_size, stdin)) {
-            LOG_ERROR("Failed to read server IP.");
+            LOG_ERROR("Failed to read IP.");
             continue;
         }
         host_ip[strcspn(host_ip, "\n")] = '\0';
@@ -154,10 +148,10 @@ static void prompt_for_ip_and_port(char *host_ip, size_t ip_size, int *host_port
         break;
     }
     while (1) {
-        LOG_STEP("Prompting for server port...");
-        printf("Enter server port: ");
+        LOG_STEP("Prompting for peer port...");
+        printf("Enter peer port: ");
         if (!safe_fgets(port_str, sizeof(port_str), stdin)) {
-            LOG_ERROR("Failed to read server port.");
+            LOG_ERROR("Failed to read port.");
             continue;
         }
         port_str[strcspn(port_str, "\n")] = '\0';
@@ -168,259 +162,317 @@ static void prompt_for_ip_and_port(char *host_ip, size_t ip_size, int *host_port
         *host_port = atoi(port_str);
         break;
     }
-    LOG_INFO("Server IP and port accepted: %s:%d", host_ip, *host_port);
+    LOG_INFO("Peer IP and port accepted: %s:%d", host_ip, *host_port);
+}
+
+/*
+ * flush_udp_socket:
+ *   Reads and discards any pending data on the UDP socket.
+ */
+static void flush_udp_socket(int sockfd) {
+    unsigned char buf[1024];
+    while (1) {
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        FD_SET(sockfd, &rfds);
+        struct timeval tv = {0, 0}; // immediate poll
+#ifdef _WIN32
+        int sel = select(0, &rfds, NULL, NULL, &tv);
+#else
+        int sel = select(sockfd + 1, &rfds, NULL, NULL, &tv);
+#endif
+        if (sel > 0 && FD_ISSET(sockfd, &rfds)) {
+            ssize_t rcv = recv(sockfd, (char *)buf, sizeof(buf), 0);
+            if (rcv <= 0)
+                break;
+        } else {
+            break;
+        }
+    }
+}
+
+/*
+ * create_bound_udp_socket:
+ *   Creates a UDP socket bound to an ephemeral port.
+ */
+static int create_bound_udp_socket(void) {
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) {
+        LOG_ERROR("Could not create UDP socket.");
+        return -1;
+    }
+    struct sockaddr_in local_addr;
+    memset(&local_addr, 0, sizeof(local_addr));
+    local_addr.sin_family = AF_INET;
+#ifdef _WIN32
+    local_addr.sin_addr.s_addr = INADDR_ANY;
+#else
+    local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+#endif
+    local_addr.sin_port = htons(0); // ephemeral
+    if (bind(sock, (struct sockaddr *)&local_addr, sizeof(local_addr)) < 0) {
+        LOG_ERROR("UDP bind() failed.");
+        socket_close(sock);
+        return -1;
+    }
+
+    // Print the ephemeral port we got (for debugging)
+    socklen_t addr_len = sizeof(local_addr);
+    if (getsockname(sock, (struct sockaddr *)&local_addr, &addr_len) == 0) {
+        int dyn_port = ntohs(local_addr.sin_port);
+        LOG_INFO("Local ephemeral UDP port: %d", dyn_port);
+    }
+    return sock;
 }
 
 /* ---------------------------------------------------------------------------
- * SERVER MODE
+ * SERVER MODE (UDP + NAT Traversal)
  * --------------------------------------------------------------------------- */
 static void server_mode(const char *username) {
-    LOG_STEP("Starting server mode...");
+    LOG_STEP("Starting server mode (UDP + NAT Traversal)...");
 
-    int server_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_socket < 0) {
-        LOG_ERROR("Could not create server socket.");
-        exit(EXIT_FAILURE);
-    }
-    LOG_INFO("Server socket created.");
-
-    struct sockaddr_in server_addr;
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family      = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port        = htons(0); // ephemeral port
-
-    if (bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        LOG_ERROR("Binding failed.");
-        socket_close(server_socket);
-        exit(EXIT_FAILURE);
-    }
-    socklen_t addr_len = sizeof(server_addr);
-    if (getsockname(server_socket, (struct sockaddr*)&server_addr, &addr_len) == -1) {
-        LOG_ERROR("getsockname failed.");
-        socket_close(server_socket);
-        exit(EXIT_FAILURE);
-    }
-    int assigned_port = ntohs(server_addr.sin_port);
-    LOG_INFO("Server socket bound to port: %d", assigned_port);
-
-    // Show server IP if possible
-    char hostname[256];
-    if (gethostname(hostname, sizeof(hostname)) == 0) {
-        struct hostent *host_entry = gethostbyname(hostname);
-        if (host_entry && host_entry->h_addr_list[0]) {
-            char *ip = inet_ntoa(*(struct in_addr *)host_entry->h_addr_list[0]);
-            LOG_INFO("Server IP: %s, Port: %d", ip, assigned_port);
-        }
+    // 1) Create & bind a UDP socket
+    int sockfd = create_bound_udp_socket();
+    if (sockfd < 0) {
+        LOG_ERROR("Server mode: Could not create/bind UDP socket.");
+        return;
     }
 
-    if (listen(server_socket, 5) < 0) {
-        LOG_ERROR("Listen failed.");
-        socket_close(server_socket);
-        exit(EXIT_FAILURE);
+    // 2) Use STUN to get our public info
+    char public_ip[64] = {0};
+    uint16_t public_port = 0;
+    if (nat_get_public_info(public_ip, sizeof(public_ip), &public_port) == 0) {
+        LOG_INFO("Share this public endpoint with your peer: %s:%u", public_ip, public_port);
+    } else {
+        LOG_WARNING("Failed to get STUN-based public endpoint. May not work behind NAT...");
     }
 
-    // Loop indefinitely so that if a connection is rejected, we keep listening.
+    // 3) Prompt for peer's public IP/port
+    chat_info info;
+    memset(&info, 0, sizeof(info));
+    strncpy(info.local_username, username, USERNAME_SIZE - 1);
+    prompt_for_ip_and_port(info.last_host_ip, sizeof(info.last_host_ip), &info.last_host_port);
+
+    // 4) Build remote address
+    struct sockaddr_in remote_addr;
+    memset(&remote_addr, 0, sizeof(remote_addr));
+    remote_addr.sin_family = AF_INET;
+    inet_pton(AF_INET, info.last_host_ip, &remote_addr.sin_addr);
+    remote_addr.sin_port = htons(info.last_host_port);
+
+    // 5) Hole punch with interactive retry if it fails after 30 attempts.
+    LOG_STEP("Performing hole punching (server side)...");
     while (1) {
-        LOG_STEP("Awaiting client connection...");
-        struct sockaddr_in client_addr;
-        socklen_t client_addr_len = sizeof(client_addr);
-        int client_sock = accept(server_socket, (struct sockaddr*)&client_addr, &client_addr_len);
-        if (client_sock < 0) {
-            LOG_ERROR("Accept failed.");
-            continue; // or break, but continuing might allow the server to keep running
+        if (hole_punch_udp(sockfd, &remote_addr, 30) == 0) {
+            // Hole punching succeeded.
+            break;
         }
-        LOG_INFO("A client has connected.");
-
-        char client_ip[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
-
-        // Acceptance prompt
+        // Hole punching failed—prompt the user until valid input is provided.
+        char choice = '\0';
         while (1) {
-            printf("Client from IP %s wants to connect. Accept (y/n)? ", client_ip);
+            char input[10];
+            printf("[INPUT] Type 'r' to retry, 'n' to re-enter IP/port, and 'q' to quit: ");
             fflush(stdout);
-
-            char choice[10];
-            if (!safe_fgets(choice, sizeof(choice), stdin)) {
-                LOG_ERROR("Failed to read acceptance choice. Please try again.");
+            if (!safe_fgets(input, sizeof(input), stdin)) {
+                LOG_ERROR("Failed to read input.");
+                socket_close(sockfd);
+                return;
+            }
+            input[strcspn(input, "\n")] = '\0';
+            if (strlen(input) != 1) {
+                LOG_WARNING("Invalid input. Please enter 'r', 'n', or 'q'.");
                 continue;
             }
-            choice[strcspn(choice, "\n")] = '\0';
-            if (strlen(choice) == 1) {
-                char c = (char)tolower((unsigned char)choice[0]);
-                if (c == 'y') {
-                    LOG_INFO("Client %s accepted. Sending ACCEPT message...", client_ip);
-                    const char *acc_msg = "ACCEPT";
-                    if (send_all(client_sock, acc_msg, strlen(acc_msg), 0) <= 0) {
-                        LOG_ERROR("Failed to send ACCEPT message.");
-                        socket_close(client_sock);
-                    } else {
-                        // proceed with ephemeral key exchange
-                        chat_info info;
-                        memset(&info, 0, sizeof(info));
-                        info.sock = client_sock;
-                        strncpy(info.local_username, username, USERNAME_SIZE - 1);
-
-                        LOG_STEP("Performing triple DH key exchange (server side)...");
-                        if (perform_key_exchange(client_sock, username, info.remote_username,
-                                                 info.rx_key, info.tx_key, 1) != 0)
-                        {
-                            LOG_ERROR("Key exchange failed on server side.");
-                            socket_close(client_sock);
-                        } else {
-                            LOG_INFO("Key exchange successful (server side).");
-
-                            // Receive client username
-                            LOG_STEP("Receiving client username...");
-                            ssize_t n = recv(client_sock, info.remote_username,
-                                             USERNAME_SIZE - 1, 0);
-                            if (n <= 0) {
-                                LOG_ERROR("Failed to receive client username.");
-                                socket_close(client_sock);
-                            } else {
-                                info.remote_username[n] = '\0';
-                                LOG_INFO("Client username: %s", info.remote_username);
-
-                                // Send server username
-                                LOG_STEP("Sending server username...");
-                                if (send_all(client_sock, username, strlen(username), 0) < 0) {
-                                    LOG_ERROR("Failed to send server username.");
-                                    socket_close(client_sock);
-                                } else {
-                                    LOG_INFO("Client %s connected from IP: %s",
-                                             info.remote_username, client_ip);
-                                    LOG_STEP("Starting chat session...");
-                                    chat_session(&info);
-                                }
-                            }
-                        }
-                    }
-                    // Done handling this connection => break from acceptance prompt loop
-                    break;
-                } else if (c == 'n') {
-                    LOG_INFO("Rejected client from IP: %s", client_ip);
-                    const char *rej_msg = "REJECT";
-                    send_all(client_sock, rej_msg, strlen(rej_msg), 0);
-                    socket_close(client_sock);
-                    // break from acceptance prompt, but remain in the main while(1) => 
-                    // continue listening for next client
-                    break;
-                }
+            choice = tolower((unsigned char)input[0]);
+            if (choice == 'r' || choice == 'n' || choice == 'q') {
+                break; // valid input received, break out of inner loop
+            } else {
+                LOG_WARNING("Invalid input. Please enter 'r', 'n', or 'q'.");
             }
-            LOG_WARNING("Invalid input. Please enter 'y' or 'n'.");
-        } // end while(1) acceptance prompt
-    } // end while(1) for repeated accept
+        }
+        // Process valid choice.
+        if (choice == 'r') {
+            continue; // retry hole punching
+        } else if (choice == 'n') {
+            prompt_for_ip_and_port(info.last_host_ip, sizeof(info.last_host_ip), &info.last_host_port);
+            memset(&remote_addr, 0, sizeof(remote_addr));
+            remote_addr.sin_family = AF_INET;
+            inet_pton(AF_INET, info.last_host_ip, &remote_addr.sin_addr);
+            remote_addr.sin_port = htons(info.last_host_port);
+            continue;
+        } else if (choice == 'q') {
+            LOG_STEP("Quitting server mode due to hole punching failure.");
+            socket_close(sockfd);
+            return;
+        }
+    }
 
-    // We'll never reach here unless we break out from the loop or terminate externally
-    socket_close(server_socket);
-    LOG_INFO("Server mode terminated (loop ended).");
+    // 6) Flush any stray data from the UDP socket
+    flush_udp_socket(sockfd);
+
+    // 7) Perform ephemeral key exchange (server side) over this UDP socket
+    LOG_STEP("Performing ephemeral key exchange (server side)...");
+    if (perform_key_exchange(sockfd, info.local_username, info.remote_username,
+                             info.rx_key, info.tx_key, /*is_server=*/1) != 0)
+    {
+        LOG_ERROR("Key exchange failed (server).");
+        socket_close(sockfd);
+        return;
+    }
+    LOG_INFO("Key exchange succeeded. Remote user: %s", info.remote_username);
+
+    // 8) Start the chat session
+    LOG_STEP("Starting chat session...");
+    info.sock = sockfd;
+    chat_session(&info);
+
+    socket_close(sockfd);
+    LOG_STEP("Server mode ended.");
 }
 
 /* ---------------------------------------------------------------------------
- * CLIENT MODE
+ * CLIENT MODE (UDP + NAT Traversal)
  * --------------------------------------------------------------------------- */
 static void client_mode(const char *username) {
-    LOG_STEP("Starting client mode...");
-    char server_ip[256];
-    int server_port;
-    prompt_for_ip_and_port(server_ip, sizeof(server_ip), &server_port);
+    LOG_STEP("Starting client mode (UDP + NAT Traversal)...");
 
+    // 1) Create & bind a UDP socket
+    int sockfd = create_bound_udp_socket();
+    if (sockfd < 0) {
+        LOG_ERROR("Client mode: Could not create/bind UDP socket.");
+        return;
+    }
+
+    // 2) Use STUN to get our public info
+    char public_ip[64] = {0};
+    uint16_t public_port = 0;
+    if (nat_get_public_info(public_ip, sizeof(public_ip), &public_port) == 0) {
+        LOG_INFO("Share this public endpoint with your peer: %s:%u", public_ip, public_port);
+    } else {
+        LOG_WARNING("Failed to get STUN-based public endpoint. May not work behind NAT...");
+    }
+
+    // 3) Prompt for peer's public IP/port
+    chat_info info;
+    memset(&info, 0, sizeof(info));
+    strncpy(info.local_username, username, USERNAME_SIZE - 1);
+    prompt_for_ip_and_port(info.last_host_ip, sizeof(info.last_host_ip), &info.last_host_port);
+
+    // 4) Build remote address
+    struct sockaddr_in remote_addr;
+    memset(&remote_addr, 0, sizeof(remote_addr));
+    remote_addr.sin_family = AF_INET;
+    inet_pton(AF_INET, info.last_host_ip, &remote_addr.sin_addr);
+    remote_addr.sin_port = htons(info.last_host_port);
+
+    // 5) Hole punch with interactive retry if it fails after 30 attempts.
+    LOG_STEP("Performing hole punching (client side)...");
     while (1) {
-        int client_socket = socket(AF_INET, SOCK_STREAM, 0);
-        if (client_socket < 0) {
-            LOG_ERROR("Could not create client socket.");
-            exit(EXIT_FAILURE);
+        if (hole_punch_udp(sockfd, &remote_addr, 30) == 0) {
+            // Hole punching succeeded.
+            break;
         }
-
-        struct sockaddr_in server_addr;
-        memset(&server_addr, 0, sizeof(server_addr));
-        server_addr.sin_family = AF_INET;
-        server_addr.sin_port   = htons(server_port);
-        if (inet_pton(AF_INET, server_ip, &server_addr.sin_addr) <= 0) {
-            LOG_ERROR("Invalid server IP.");
-            socket_close(client_socket);
-            exit(EXIT_FAILURE);
-        }
-
-        LOG_STEP("Connecting to server...");
-        if (connect(client_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == 0) {
-            LOG_INFO("Connected to server.");
-            // Wait for ACCEPT or REJECT
-            char buffer[128];
-            ssize_t read_len = recv(client_socket, buffer, sizeof(buffer) - 1, 0);
-            if (read_len <= 0) {
-                LOG_INFO("Connection closed by peer.");
-                socket_close(client_socket);
-            } else {
-                buffer[read_len] = '\0';
-                if (strncmp(buffer, "ACCEPT", 6) == 0) {
-                    LOG_INFO("Server accepted connection. Proceeding with key exchange...");
-                    chat_info info;
-                    memset(&info, 0, sizeof(info));
-                    info.sock = client_socket;
-                    strncpy(info.local_username, username, USERNAME_SIZE - 1);
-                    strncpy(info.last_host_ip, server_ip, sizeof(info.last_host_ip)-1);
-                    info.last_host_port = server_port;
-                    
-                    if (perform_key_exchange(client_socket, username, info.remote_username,
-                                             info.rx_key, info.tx_key, 0) != 0)
-                    {
-                        LOG_ERROR("Key exchange failed on client side.");
-                        socket_close(client_socket);
-                    } else {
-                        LOG_INFO("Key exchange successful (client side).");
-                        // Send client username
-                        LOG_STEP("Sending client username...");
-                        if (send_all(client_socket, username, strlen(username), 0) < 0) {
-                            LOG_ERROR("Failed to send client username.");
-                            socket_close(client_socket);
-                        } else {
-                            // Receive server username
-                            LOG_STEP("Receiving server username...");
-                            ssize_t n = recv(client_socket, info.remote_username,
-                                             USERNAME_SIZE - 1, 0);
-                            if (n <= 0) {
-                                LOG_ERROR("Failed to receive server username.");
-                                socket_close(client_socket);
-                            } else {
-                                info.remote_username[n] = '\0';
-                                LOG_INFO("Server username: %s", info.remote_username);
-                                LOG_STEP("Starting chat session...");
-                                chat_session(&info);
-                            }
-                        }
-                    }
-                } else {
-                    LOG_INFO("Server did not accept our connection (got: %s).", buffer);
-                    socket_close(client_socket);
-                }
-            }
-        } else {
-            LOG_WARNING("Connection failed. Retrying or re-enter IP/port?");
-            socket_close(client_socket);
-        }
-
-        // re-prompt after disconnection
-        char choice[10];
+        // Hole punching failed—prompt the user until valid input is provided.
+        char choice = '\0';
         while (1) {
-            printf("[INPUT] Type 'r' to retry or 'n' to enter a new IP/port: ");
-            if (!safe_fgets(choice, sizeof(choice), stdin)) {
+            char input[10];
+            printf("[INPUT] Type 'r' to retry, 'n' to re-enter IP/port, and 'q' to quit: ");
+            fflush(stdout);
+            if (!safe_fgets(input, sizeof(input), stdin)) {
                 LOG_ERROR("Failed to read input.");
+                socket_close(sockfd);
+                return;
+            }
+            input[strcspn(input, "\n")] = '\0';
+            if (strlen(input) != 1) {
+                LOG_WARNING("Invalid input. Please enter 'r', 'n', or 'q'.");
                 continue;
             }
-            choice[strcspn(choice, "\n")] = '\0';
-            if (strlen(choice) == 1) {
-                char c = (char)tolower((unsigned char)choice[0]);
-                if (c == 'r' || c == 'n')
-                    break;
+            choice = tolower((unsigned char)input[0]);
+            if (choice == 'r' || choice == 'n' || choice == 'q') {
+                break; // valid input received
+            } else {
+                LOG_WARNING("Invalid input. Please enter 'r', 'n', or 'q'.");
             }
-            LOG_WARNING("Invalid input. Please try again.");
         }
-        if (tolower((unsigned char)choice[0]) == 'r') {
+        // Process valid choice.
+        if (choice == 'r') {
+            continue; // retry hole punching
+        } else if (choice == 'n') {
+            prompt_for_ip_and_port(info.last_host_ip, sizeof(info.last_host_ip), &info.last_host_port);
+            memset(&remote_addr, 0, sizeof(remote_addr));
+            remote_addr.sin_family = AF_INET;
+            inet_pton(AF_INET, info.last_host_ip, &remote_addr.sin_addr);
+            remote_addr.sin_port = htons(info.last_host_port);
             continue;
-        } else {
-            prompt_for_ip_and_port(server_ip, sizeof(server_ip), &server_port);
-            continue;
+        } else if (choice == 'q') {
+            LOG_STEP("Quitting client mode due to hole punching failure.");
+            socket_close(sockfd);
+            return;
         }
     }
+
+    // 6) Flush any stray data from the UDP socket
+    flush_udp_socket(sockfd);
+
+    // 7) Perform ephemeral key exchange (client side) over this UDP socket
+    LOG_STEP("Performing ephemeral key exchange (client side)...");
+    if (perform_key_exchange(sockfd, info.local_username, info.remote_username,
+                             info.rx_key, info.tx_key, /*is_server=*/0) != 0)
+    {
+        LOG_ERROR("Key exchange failed (client).");
+        socket_close(sockfd);
+        return;
+    }
+    LOG_INFO("Key exchange succeeded. Remote user: %s", info.remote_username);
+
+    // 8) Start the chat session
+    LOG_STEP("Starting chat session...");
+    info.sock = sockfd;
+    chat_session(&info);
+
+    socket_close(sockfd);
+    LOG_STEP("Client mode ended.");
+}
+
+/* ---------------------------------------------------------------------------
+ * MAIN
+ * --------------------------------------------------------------------------- */
+int main(void) {
+    LOG_STEP("Application starting...");
+    init_sockets_and_crypto();
+
+    // Prompt for username
+    char username[USERNAME_SIZE];
+    if (get_username(username, sizeof(username)) != 0) {
+        cleanup_sockets();
+        exit(EXIT_FAILURE);
+    }
+
+    // Ask user: server or client?
+    char choice[10];
+    while (1) {
+        LOG_STEP("Prompting for mode selection...");
+        printf("Press 'c' to connect as client, or ENTER to run as server: ");
+        if (!safe_fgets(choice, sizeof(choice), stdin)) {
+            LOG_ERROR("Failed to read mode selection.");
+            continue;
+        }
+        choice[strcspn(choice, "\n")] = '\0';
+        if (strlen(choice) == 0 || (strlen(choice) == 1 && tolower((unsigned char)choice[0]) == 'c')) {
+            break;
+        } else {
+            LOG_WARNING("Invalid input. Press 'c' (client) or ENTER (server).");
+        }
+    }
+
+    if (strlen(choice) == 1 && tolower((unsigned char)choice[0]) == 'c') {
+        client_mode(username);
+    } else {
+        server_mode(username);
+    }
+
+    cleanup_sockets();
+    LOG_STEP("Application terminating.");
+    return 0;
 }

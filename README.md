@@ -1,6 +1,6 @@
 # Pear (Version 0.4)
 
-**Pear** is an open-source, terminal-based, independent, peer-to-peer encrypted chat platform for one-on-one communication. It enables **fully private** conversations across **Windows, Linux, and macOS** (Linux and MacOS planned for future) by using advanced, ephemeral encryption with no central servers and no stored logs.
+**Pear** is an open-source, terminal-based, independent, peer-to-peer encrypted chat platform for one-on-one communication. It enables **fully private** conversations for **Windows** (Linux and MacOS planned for future) by using advanced, ephemeral encryption with no central servers and no stored logs.
 
 Pear leverages:
 - **End-to-end encryption with Libsodium** – Dynamically generated, ephemeral keys for every session.
@@ -25,21 +25,13 @@ Pear does not store any logs—neither in memory nor on disk. All sensitive data
 Unlike traditional chat platforms, Pear does not rely on any central servers. Instead, it establishes **direct peer-to-peer** connections, preventing any third party from intercepting or logging communications.
 
 ### Secure Ephemeral Key Exchange
-Pear utilizes **Triple Diffie-Hellman key exchange** to securely negotiate encryption keys between peers. This ensures that every session has a unique key, and once the session ends, the keys are **permanently discarded**.
+Pear utilizes **Dual Diffie-Hellman key exchange** (triple planned in future) to securely negotiate encryption keys between peers. This ensures that every session has a unique key, and once the session ends, the keys are **permanently discarded**.
 
 ### Strong End-to-End Encryption
 - **Encryption Algorithm:** ChaCha20-Poly1305 AEAD
 - **Message Authentication:** Poly1305 MAC ensures message integrity
 - **Key Derivation:** HKDF using BLAKE2b
 
-### Robust Error Handling and Secure Input
-Pear ensures error-free execution with:
-- Secure input handling using `safe_fgets`
-- Reliable message transmission with `send_all`
-- Immediate cleanup of invalid sessions to prevent crashes
-
-### Multi-Threaded Send/Receive Architecture
-Pear employs a **multi-threaded design**, allowing concurrent message sending and receiving. This ensures **real-time, low-latency communication**.
 
 ### Built-in Command Set
 Pear provides a minimal yet powerful command set:
@@ -50,37 +42,20 @@ Pear provides a minimal yet powerful command set:
 - `/disconnect` – Terminate the session immediately
 - `/exit` – Gracefully close the chat session
 
-### Automatic Reconnection Prompt (Client-Side)
-If a client fails to connect, Pear prompts:
-```
-[INPUT] Type 'r' to retry or 'n' to enter a new IP/port:
-```
-This allows users to **reconnect without restarting** the application.
-
-### Persistent Server Listening
-When a connection is rejected, the server **remains active**, continuously listening for new clients.
-
-### Cross-Platform Compatibility
-Pear is **fully supported on Windows, Linux, and macOS**, with platform-specific socket and threading implementations.
-
-### CMake-Based Build System
-Pear uses **CMake** for easy cross-platform compilation and dependency management.
-
 ---
 
 ## Technical Details
 
 ### Cryptographic Key Exchange
-Pear implements **Triple Diffie-Hellman (TDH) key exchange**, ensuring **perfect forward secrecy**. The process is as follows:
+Pear implements **Dual Diffie-Hellman (DDH) key exchange**, ensuring **perfect forward secrecy**. The process is as follows:
 
 1. **Ephemeral Key Generation**
    - Each peer generates **two ephemeral key pairs**.
 
 2. **Diffie-Hellman Computations**
-   - Three DH operations are performed:
+   - Dual DH operations are performed:
      - `DH1 = crypto_scalarmult(local_eph1_sk, remote_eph1_pk)`
      - `DH2 = crypto_scalarmult(local_eph1_sk, remote_eph2_pk)`
-     - `DH3 = crypto_scalarmult(local_eph2_sk, remote_eph1_pk)`
    - The three DH outputs are concatenated into a **96-byte shared secret**.
 
 3. **Key Derivation**

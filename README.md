@@ -127,5 +127,5 @@ brew install cmake ninja libsodium
 ---
 
 ## License
-Pear is released under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+Pear is released under the **GNU AGPLv3 License**. See the [LICENSE](LICENSE) file for details.
 

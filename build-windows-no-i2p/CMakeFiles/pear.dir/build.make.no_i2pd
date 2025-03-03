@@ -1,0 +1,4 @@
+# Modified build file to exclude I2PD files
+$(CMAKE_COMMAND) -E cmake_progress_report $(CMAKE_BINARY_DIR)/CMakeFiles $(CMAKE_PROGRESS_1)
+$(CMAKE_COMMAND) -E cmake_progress_report $(CMAKE_BINARY_DIR)/CMakeFiles $(CMAKE_PROGRESS_2)
+$(CMAKE_COMMAND) -E cmake_progress_report $(CMAKE_BINARY_DIR)/CMakeFiles $(CMAKE_PROGRESS_3)

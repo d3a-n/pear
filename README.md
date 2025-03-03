@@ -2,7 +2,7 @@
 
 **pear** is a secure, decentralized, peer-to-peer encrypted chat application that operates entirely over the I2P network. It provides strong encryption, anonymity, and censorship resistance, ensuring that no government or adversary can track, intercept, or manipulate communications.
 
-![Screenshot](screenshots/test.png)
+[//]: <> ![Screenshot](screenshots/screenshot.png)
 
 ## Features
 

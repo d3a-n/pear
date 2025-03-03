@@ -2,12 +2,12 @@
 
 **pear** is a secure, decentralized, peer-to-peer encrypted chat application that operates entirely over the I2P network. It provides strong encryption, anonymity, and censorship resistance, ensuring that no government or adversary can track, intercept, or manipulate communications.
 
-[//]: <![Screenshot](screenshots/screenshot.png)> ![Screenshot](screenshots/screenshot.png)
+![Screenshot](screenshots/screenshot.png)
 
 ## Features
 
 ### End-to-End Encryption
-- **Triple Diffie-Hellman (3DH)** key exchange for secure session establishment
+- **Triple Diffie-Hellman (3DH)** key exchange for secure session establishmenthttps://github.com/d3a-n/pear/blob/main/README.md
 - **ChaCha20-Poly1305** authenticated encryption for all messages
 - **Double Ratchet Algorithm** for perfect forward secrecy
 - **HKDF** for secure key derivation

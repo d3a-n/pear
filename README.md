@@ -1,131 +1,129 @@
-# Pear (Version 0.4)
+# pear - Fully Encrypted P2P Chat Over I2P
 
-**Pear** is an open-source, terminal-based, independent, peer-to-peer encrypted chat platform for one-on-one communication. It enables **fully private** conversations for **Windows** (Linux and MacOS planned for future) by using advanced, ephemeral encryption with no central servers and no stored logs.
-
-Pear leverages:
-- **End-to-end encryption with Libsodium** – Dynamically generated, ephemeral keys for every session.
-- **Dynamic, ephemeral connection keys** – Each connection is uniquely secured.
-- **Zero logs – Ever.** – No data is stored or persisted, ensuring total privacy.
-- **Robust error handling and secure input routines** – Enhancing reliability.
-- **Multi-threaded architecture** – Simultaneous sending and receiving for real-time chat.
-- **A minimalist command-line interface** – Streamlined for one-on-one interactions.
-- **Automatic reconnection prompts** – If a client disconnects or is rejected, it is prompted to retry or enter new connection parameters.
-- **Persistent server listening** – When a connection is rejected, the server continues to listen for new incoming connections.
+**pear** is a secure, decentralized, peer-to-peer encrypted chat application that operates entirely over the I2P network. It provides strong encryption, anonymity, and censorship resistance, ensuring that no government or adversary can track, intercept, or manipulate communications.
 
 ![Screenshot](screenshots/screenshot.png)
 
----
+## Features
 
-## Current Features
+### End-to-End Encryption
+- **Triple Diffie-Hellman (3DH)** key exchange for secure session establishment
+- **ChaCha20-Poly1305** authenticated encryption for all messages
+- **Double Ratchet Algorithm** for perfect forward secrecy
+- **HKDF** for secure key derivation
 
-### Zero-Logging Policy
-Pear does not store any logs—neither in memory nor on disk. All sensitive data, including ephemeral encryption keys and connection metadata, are securely wiped after each session. This ensures **absolute privacy and security**.
+### I2P Network Integration
+- **Embedded I2PD daemon** for seamless I2P connectivity
+- **SAM API** for I2P tunnel management
+- **No outproxies** - stays 100% inside I2P to prevent traffic leaks
+- **Username-based connections** with decentralized lookup
 
-### Decentralized, One-on-One Chat
-Unlike traditional chat platforms, Pear does not rely on any central servers. Instead, it establishes **direct peer-to-peer** connections, preventing any third party from intercepting or logging communications.
+### Connection Privacy
+- **Connection approval** - Server must approve incoming connections
+- **No persistent trusted peers** - No stored contact information
+- **Y/N confirmation prompt** - Explicitly approve each connection request
+- **Connection rejection** - Securely reject unwanted connections
 
-### Secure Ephemeral Key Exchange
-Pear utilizes **Dual Diffie-Hellman key exchange** (triple planned in future) to securely negotiate encryption keys between peers. This ensures that every session has a unique key, and once the session ends, the keys are **permanently discarded**.
+### Anti-Traffic Analysis
+- **Random message padding** to prevent size-based tracking
+- **Randomized message timing** to avoid timing correlation
+- **Dummy traffic generation** to obscure real messages
+- **No cleartext metadata** - all data is fully encrypted
 
-### Strong End-to-End Encryption
-- **Encryption Algorithm:** ChaCha20-Poly1305 AEAD
-- **Message Authentication:** Poly1305 MAC ensures message integrity
-- **Key Derivation:** HKDF using BLAKE2b
+### Secure Exit Handling
+- **Retract I2P tunnels** on exit
+- **Wipe encryption keys from RAM** using `sodium_memzero`
+- **Delete temporary session data** securely
+- **Ensure nothing is recoverable** after exit
 
+### Command System
+- `/help` - Display available commands
+- `/cl` - Clear the terminal screen
+- `/pg` - Test connection latency
+- `/dc` - Disconnect from the current peer
+- `/rr` - Refresh I2P routes and tunnels
 
-### Built-in Command Set
-Pear provides a minimal yet powerful command set:
-- `/help` – Display available commands
-- `/clear` – Clear the terminal screen
-- `/status` – Show connection status (local and remote IP, usernames, and ports)
-- `/ping` – Send a ping message (remote peer responds with a pong)
-- `/disconnect` – Terminate the session immediately
-- `/exit` – Gracefully close the chat session
+## Building from Source
 
----
+### Prerequisites
+- CMake 3.10 or higher
+- C++17 compatible compiler
+- libsodium
+- I2PD (or system I2P router)
 
-## Technical Details
+### Build Instructions
 
-### Cryptographic Key Exchange
-Pear implements **Dual Diffie-Hellman (DDH) key exchange**, ensuring **perfect forward secrecy**. The process is as follows:
+#### Linux
+```bash
+# Install dependencies
+sudo apt install build-essential cmake libsodium-dev i2pd
 
-1. **Ephemeral Key Generation**
-   - Each peer generates **two ephemeral key pairs**.
-
-2. **Diffie-Hellman Computations**
-   - Dual DH operations are performed:
-     - `DH1 = crypto_scalarmult(local_eph1_sk, remote_eph1_pk)`
-     - `DH2 = crypto_scalarmult(local_eph1_sk, remote_eph2_pk)`
-   - The three DH outputs are concatenated into a **96-byte shared secret**.
-
-3. **Key Derivation**
-   - The shared secret is hashed using **BLAKE2b**.
-   - Unique session keys are derived as follows:
-     - **Server:**
-       - Receive Key (`rx_key`) = `H(master_secret, "c2s")`
-       - Transmit Key (`tx_key`) = `H(master_secret, "s2c")`
-     - **Client:**
-       - Transmit Key (`tx_key`) = `H(master_secret, "c2s")`
-       - Receive Key (`rx_key`) = `H(master_secret, "s2c")`
-
-### Message Encryption
-- **Algorithm:** ChaCha20-Poly1305 AEAD
-- **Nonce Handling:** A random 12-byte nonce is prepended to each message
-- **Authentication:** Poly1305 ensures message integrity
-
-### Network Handling
-Pear uses **UDP hole punching** to establish direct connections, even when NAT is present. If hole punching fails, the program prompts for retries or new connection details.
-
-### Multi-Threaded Architecture
-- **Send Thread:** Reads input, processes commands, encrypts messages, and transmits them.
-- **Receive Thread:** Reads, decrypts, and prints incoming messages.
-- **Thread Synchronization:** Handled via mutexes and condition variables to prevent race conditions.
-
-### Server & Client Connection Management
-- **Server listens indefinitely** for incoming connections.
-- **Client retries failed connections** without restarting.
-
----
-
-## Installation
-
-### Build from Source
-```sh
-git clone https://github.com/d3a-n/pear
+# Clone the repository
+git clone https://github.com/yourusername/pear.git
 cd pear
-cmake -S . -B build
-cmake --build build
+
+# Build
+mkdir build && cd build
+cmake ..
+make
 ```
 
-### Manual Compilation Dependencies
+#### macOS
+```bash
+# Install dependencies
+brew install cmake libsodium i2pd
+
+# Clone the repository
+git clone https://github.com/yourusername/pear.git
+cd pear
+
+# Build
+mkdir build && cd build
+cmake ..
+make
+```
+
 #### Windows (MSYS2)
-```sh
-pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-libsodium cmake ninja
-```
+```bash
+# Install dependencies
+pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-libsodium
 
-#### Linux (Debian, Ubuntu, Fedora, Arch, etc.)
-```sh
-sudo apt install build-essential cmake ninja-build pkg-config
-```
+# Clone the repository
+git clone https://github.com/yourusername/pear.git
+cd pear
 
-#### macOS (Homebrew)
-```sh
-brew install cmake ninja libsodium
+# Build
+mkdir build && cd build
+cmake -G "MSYS Makefiles" ..
+make
 ```
-
----
 
 ## Usage
-```sh
-./pear
-```
 
-1. **Enter Username**
-2. **Select Mode** (`c` for client, ENTER for server)
-3. **Chat Securely**
+1. Start the application:
+   ```
+   ./pear
+   ```
 
----
+2. Enter your username (alphanumeric or underscores)
+
+3. Choose to run as a server (press ENTER) or client (press 'c')
+
+4. If running as a client, enter the username of the peer you want to connect to
+
+5. If running as a server, you'll receive connection requests with a prompt to accept (y) or reject (n)
+
+6. Start chatting securely!
+
+## Security Considerations
+
+- All encryption keys are stored only in RAM and wiped on exit
+- No logs or message history are stored
+- All communications stay within the I2P network
+- No persistent trusted peers database - all connections must be explicitly approved
+- Random padding and dummy traffic help prevent traffic analysis
+- The application automatically handles secure exit when terminated
 
 ## License
-Pear is released under the **GNU AGPLv3 License**. See the [LICENSE](LICENSE) file for details.
 
+This project is licensed under the GNU GPLv3 License - see the [LICENSE](LICENSE) file for details.

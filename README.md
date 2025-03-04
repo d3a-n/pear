@@ -2,8 +2,6 @@
 
 **pear** is a secure, decentralized, peer-to-peer encrypted chat application that operates entirely over the I2P network. It provides strong encryption, anonymity, and censorship resistance, ensuring that no government or adversary can track, intercept, or manipulate communications.
 
-![Screenshot](screenshots/screenshot.png)
-
 ## Features
 
 ### End-to-End Encryption
@@ -16,11 +14,10 @@
 - **Embedded I2PD daemon** for seamless I2P connectivity
 - **SAM API** for I2P tunnel management
 - **No outproxies** - stays 100% inside I2P to prevent traffic leaks
-- **Username-based connections** with decentralized lookup
+- **Username-based connections** using I2P naming API
 
 ### Connection Privacy
 - **Connection approval** - Server must approve incoming connections
-- **No persistent trusted peers** - No stored contact information
 - **Y/N confirmation prompt** - Explicitly approve each connection request
 - **Connection rejection** - Securely reject unwanted connections
 
@@ -120,7 +117,7 @@ make
 - All encryption keys are stored only in RAM and wiped on exit
 - No logs or message history are stored
 - All communications stay within the I2P network
-- No persistent trusted peers database - all connections must be explicitly approved
+- All connections must be explicitly approved
 - Random padding and dummy traffic help prevent traffic analysis
 - The application automatically handles secure exit when terminated
 

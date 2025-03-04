@@ -3,6 +3,8 @@
 
 #include <string>
 #include <mutex>
+#include <cstdio>  // For snprintf
+#include <cstdarg> // For variadic functions
 
 // Log levels
 enum class LogLevel {
@@ -11,7 +13,7 @@ enum class LogLevel {
     STEP,
     WARNING,
     ERROR_LEVEL,  // Renamed from ERROR to avoid Windows macro clash
-    NONE  // Used to disable logging
+    NONE          // Used to disable logging
 };
 
 class Logger {
@@ -26,14 +28,14 @@ public:
     // Set the minimum log level
     void setLogLevel(LogLevel level);
 
-    // Log methods
+    // Log methods (string-based)
     void debug(const std::string& message);
     void info(const std::string& message);
     void step(const std::string& message);
     void warning(const std::string& message);
     void error(const std::string& message);
 
-    // Format and log a message with variable arguments
+    // Log methods (format-based)
     template<typename... Args>
     void debug(const char* format, Args... args);
 
@@ -53,7 +55,7 @@ private:
     // Private constructor for singleton
     Logger();
     
-    // Log level
+    // Current log level
     LogLevel currentLevel;
     
     // Mutex for thread safety
@@ -112,19 +114,26 @@ void Logger::error(const char* format, Args... args) {
 
 template<typename... Args>
 std::string Logger::formatString(const char* format, Args... args) {
-    // Calculate the required buffer size
-    int size = snprintf(nullptr, 0, format, args...);
+    // Temporarily suppress -Wformat-security warnings for variadic snprintf
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wformat-security"
+    int size = std::snprintf(nullptr, 0, format, args...);
+    #pragma GCC diagnostic pop
+
     if (size <= 0) {
         return "Error formatting log message";
     }
     
-    // Allocate buffer with space for null terminator
+    // Allocate buffer (including null terminator)
     std::string buffer(size + 1, '\0');
     
-    // Format the string
-    snprintf(&buffer[0], size + 1, format, args...);
-    
-    // Remove the null terminator from the std::string
+    // Suppress -Wformat-security again for the actual write
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wformat-security"
+    std::snprintf(&buffer[0], size + 1, format, args...);
+    #pragma GCC diagnostic pop
+
+    // Resize to discard the trailing null
     buffer.resize(size);
     
     return buffer;

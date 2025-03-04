@@ -47,66 +47,24 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 target_link_libraries(pear PRIVATE Threads::Threads)
 
-# Use pkg-config to find libsodium properly.
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(LIBSODIUM REQUIRED libsodium)
+# Build embedded libsodium
+message(STATUS "Building embedded libsodium")
+add_subdirectory(${CMAKE_SOURCE_DIR}/libsodium)
+target_link_libraries(pear PRIVATE sodium)
 
-# Link Libsodium include directories and libraries.
-target_include_directories(pear PRIVATE ${LIBSODIUM_INCLUDE_DIRS})
-target_link_libraries(pear PRIVATE ${LIBSODIUM_LIBRARIES})
+# Build embedded I2PD
+message(STATUS "Building embedded I2PD")
+add_subdirectory(${CMAKE_SOURCE_DIR}/i2pd)
+target_link_libraries(pear PRIVATE i2pd)
 
-# I2PD Configuration
-# Check if I2PD is available as a system library first
-pkg_check_modules(I2PD IMPORTED_TARGET libi2pd)
-if(I2PD_FOUND)
-    message(STATUS "Using system I2PD library")
-    target_link_libraries(pear PRIVATE PkgConfig::I2PD)
-else()
-    message(STATUS "System I2PD not found, using embedded I2PD")
-    # Add I2PD as a submodule or embedded library
-    # This is a placeholder - you'll need to adjust based on how I2PD is included
-    # For now, we'll assume I2PD headers are in ${CMAKE_SOURCE_DIR}/i2pd/libi2pd
-    if(EXISTS "${CMAKE_SOURCE_DIR}/i2pd/libi2pd")
-        target_include_directories(pear PRIVATE 
-            ${CMAKE_SOURCE_DIR}/i2pd
-            ${CMAKE_SOURCE_DIR}/i2pd/libi2pd
-            ${CMAKE_SOURCE_DIR}/i2pd/libi2pd_client
-        )
-        # Option to disable I2P support (useful for cross-compilation)
-        option(DISABLE_I2P "Disable I2P support for Windows build" OFF)
+# Disable i18n support to avoid undefined reference errors
+target_compile_definitions(pear PRIVATE DISABLE_I18N)
 
-        if(DISABLE_I2P)
-            message(STATUS "I2P support explicitly disabled")
-            target_compile_definitions(pear PRIVATE DISABLE_I2P)
-        else()
-            # Try to set up I2P dependencies
-            message(STATUS "Setting up I2P dependencies")
-            
-            # Add I2PD source files
-            file(GLOB I2PD_SOURCES 
-                "${CMAKE_SOURCE_DIR}/i2pd/libi2pd/*.cpp"
-                "${CMAKE_SOURCE_DIR}/i2pd/libi2pd_client/*.cpp"
-            )
-            target_sources(pear PRIVATE ${I2PD_SOURCES})
-            
-            # Check for required dependencies
-            find_package(Boost COMPONENTS system filesystem program_options date_time thread)
-            find_package(OpenSSL)
-            find_package(ZLIB)
-            
-            if(Boost_FOUND AND OPENSSL_FOUND AND ZLIB_FOUND)
-                # All dependencies found, enable I2P
-                target_include_directories(pear PRIVATE ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
-                target_link_libraries(pear PRIVATE ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ZLIB::ZLIB)
-            else()
-                # Missing dependencies, disable I2P
-                message(STATUS "I2P support disabled for build due to missing dependencies")
-                target_compile_definitions(pear PRIVATE DISABLE_I2P)
-            endif()
-        endif()
-    else()
-        message(FATAL_ERROR "I2PD source not found at ${CMAKE_SOURCE_DIR}/i2pd. Please clone I2PD repository or install system package.")
-    endif()
+# Option to disable I2P support (useful for cross-compilation)
+option(DISABLE_I2P "Disable I2P support for Windows build" OFF)
+if(DISABLE_I2P)
+    message(STATUS "I2P support explicitly disabled")
+    target_compile_definitions(pear PRIVATE DISABLE_I2P)
 endif()
 
 # Platform-specific settings.
@@ -114,7 +72,7 @@ if (WIN32)
     message(STATUS "Compiling on Windows (MinGW-w64)")
     
     # Link against Winsock2 and winpthread; ensure static linking for standard libraries.
-    target_link_libraries(pear PRIVATE ws2_32 -static -Wl,-Bstatic ${LIBSODIUM_LIBRARIES} -lwinpthread -Wl,-Bdynamic)
+    target_link_libraries(pear PRIVATE ws2_32 -static -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic)
     target_link_options(pear PRIVATE -static-libgcc -static-libstdc++)
     
     # Add Windows icon.
@@ -126,10 +84,7 @@ if (WIN32)
     target_sources(pear PRIVATE "${RC_FILE}")
 
 elseif (APPLE)
-    message(STATUS "Compiling on macOS (forcing static Libsodium)")
-    
-    # Ensure static linking for Libsodium on macOS.
-    target_link_libraries(pear PRIVATE -Wl,-Bstatic -lsodium -Wl,-Bdynamic)
+    message(STATUS "Compiling on macOS")
     
     # Add macOS icon.
     message(STATUS "Adding macOS icon")
@@ -142,10 +97,7 @@ elseif (APPLE)
     )
 
 elseif (UNIX)
-    message(STATUS "Compiling on Linux (forcing static Libsodium)")
-    
-    # Ensure static linking for Libsodium on Linux.
-    target_link_libraries(pear PRIVATE -Wl,-Bstatic -lsodium -Wl,-Bdynamic)
+    message(STATUS "Compiling on Linux")
 endif()
 
 # Optimize Release mode.

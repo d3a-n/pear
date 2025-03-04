@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <errno.h>  // Included for errno usage in send_all
 
 /* Global flag for exit handling */
 static volatile int exit_requested = 0;
@@ -53,6 +54,11 @@ ssize_t send_all(int sock, const void *buf, size_t len, int flags) {
     return (ssize_t)len;
 }
 
+/* New wrapper function for secure exit matching atexit's signature */
+static void secure_exit_wrapper(void) {
+    secure_exit(0);
+}
+
 /* Register exit handlers */
 void register_exit_handlers(void) {
     // Register signal handlers
@@ -63,8 +69,8 @@ void register_exit_handlers(void) {
     signal(SIGHUP, signal_handler);
 #endif
 
-    // Register atexit handler
-    atexit(secure_exit);
+    // Register atexit handler with the wrapper function
+    atexit(secure_exit_wrapper);
 }
 
 /* Secure exit handler */

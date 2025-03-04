@@ -1,3 +1,0 @@
-/usr/bin/cmake -E rm -f CMakeFiles/pear.dir/objects.a
-/usr/bin/x86_64-w64-mingw32-ar qc CMakeFiles/pear.dir/objects.a @CMakeFiles/pear.dir/objects1.rsp
-/usr/bin/x86_64-w64-mingw32-g++ -g -static-libgcc -static-libstdc++ -Wl,--whole-archive CMakeFiles/pear.dir/objects.a -Wl,--no-whole-archive -o pear.exe -Wl,--out-implib,libpear.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles/pear.dir/linkLibs.rsp

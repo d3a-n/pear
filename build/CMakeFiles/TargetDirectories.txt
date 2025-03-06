@@ -1,0 +1,8 @@
+/mnt/d5c8a1fe-f6d7-410c-bfca-89a411c4d388/Server/pear/build/CMakeFiles/pear.dir
+/mnt/d5c8a1fe-f6d7-410c-bfca-89a411c4d388/Server/pear/build/CMakeFiles/edit_cache.dir
+/mnt/d5c8a1fe-f6d7-410c-bfca-89a411c4d388/Server/pear/build/CMakeFiles/rebuild_cache.dir
+/mnt/d5c8a1fe-f6d7-410c-bfca-89a411c4d388/Server/pear/build/i2pd/CMakeFiles/libi2pd.dir
+/mnt/d5c8a1fe-f6d7-410c-bfca-89a411c4d388/Server/pear/build/i2pd/CMakeFiles/libi2pdclient.dir
+/mnt/d5c8a1fe-f6d7-410c-bfca-89a411c4d388/Server/pear/build/i2pd/CMakeFiles/libi2pdlang.dir
+/mnt/d5c8a1fe-f6d7-410c-bfca-89a411c4d388/Server/pear/build/i2pd/CMakeFiles/edit_cache.dir
+/mnt/d5c8a1fe-f6d7-410c-bfca-89a411c4d388/Server/pear/build/i2pd/CMakeFiles/rebuild_cache.dir

@@ -17,6 +17,9 @@
 #include <signal.h>
 #endif
 
+// Define DISABLE_I2P_C to avoid duplicate definitions with i2p_wrapper.cpp
+#define DISABLE_I2P_C
+
 // If I2P support is disabled (for Windows cross-compilation), provide stub implementations
 #ifndef DISABLE_I2P
 
@@ -33,13 +36,17 @@ static int sam_port = 7656;
 
 /* I2P daemon control */
 int i2pd_start(void) {
-#ifndef DISABLE_I2P
+#if defined(DISABLE_I2P) || defined(DISABLE_I2P_C)
+    // Stub implementation when I2P is disabled
+    return -1;
+}
+#else
     // Use the embedded i2pd library
-    LOG_STEP("Starting embedded I2PD...");
+    PEAR_LOG_STEP("Starting embedded I2PD...");
     
     // Check if I2PD is already running
     if (i2pd_is_running()) {
-        LOG_INFO("I2PD is already running");
+        PEAR_LOG_INFO("I2PD is already running");
         return 0; // Already running
     }
     
@@ -47,16 +54,16 @@ int i2pd_start(void) {
     // This function is implemented in i2p_wrapper.cpp
     return 0;
 }
-#else // DISABLE_I2P is defined
+#endif
+
+int i2pd_stop(void) {
+#if defined(DISABLE_I2P) || defined(DISABLE_I2P_C)
     // Stub implementation when I2P is disabled
     return -1;
 }
-#endif // DISABLE_I2P
-
-int i2pd_stop(void) {
-#ifndef DISABLE_I2P
+#else
     // Use the embedded i2pd library
-    LOG_STEP("Stopping embedded I2PD...");
+    PEAR_LOG_STEP("Stopping embedded I2PD...");
     
     // Check if I2PD is running
     if (!i2pd_is_running()) {
@@ -67,27 +74,29 @@ int i2pd_stop(void) {
     // This function is implemented in i2p_wrapper.cpp
     return 0;
 }
-#else // DISABLE_I2P is defined
-    // Stub implementation when I2P is disabled
-    return -1;
-}
-#endif // DISABLE_I2P
+#endif
 
 int i2pd_is_running(void) {
-#ifndef DISABLE_I2P
+#if defined(DISABLE_I2P) || defined(DISABLE_I2P_C)
+    // Stub implementation when I2P is disabled
+    return 0;
+}
+#else
     // Use the embedded i2pd library
     // This function is implemented in i2p_wrapper.cpp
     return 1; // Always return running for now
 }
-#else // DISABLE_I2P is defined
-    // Stub implementation when I2P is disabled
-    return 0;
-}
-#endif // DISABLE_I2P
+#endif
 
 /* SAM API functions */
 int sam_connect(const char *sam_host, int sam_port) {
-#ifndef DISABLE_I2P
+#if defined(DISABLE_I2P) || defined(DISABLE_I2P_C)
+    // Stub implementation when I2P is disabled
+    (void)sam_host;
+    (void)sam_port;
+    return -1;
+}
+#else
     if (!sam_host) {
         return -1;
     }
@@ -121,16 +130,15 @@ int sam_connect(const char *sam_host, int sam_port) {
     
     return sock;
 }
-#else // DISABLE_I2P is defined
-    // Stub implementation when I2P is disabled
-    (void)sam_host;
-    (void)sam_port;
-    return -1;
-}
-#endif // DISABLE_I2P
+#endif
 
 int sam_disconnect(int sam_socket) {
-#ifndef DISABLE_I2P
+#if defined(DISABLE_I2P) || defined(DISABLE_I2P_C)
+    // Stub implementation when I2P is disabled
+    (void)sam_socket;
+    return -1;
+}
+#else
     if (sam_socket < 0) {
         return -1;
     }
@@ -138,15 +146,15 @@ int sam_disconnect(int sam_socket) {
     socket_close(sam_socket);
     return 0;
 }
-#else // DISABLE_I2P is defined
+#endif
+
+int sam_hello(int sam_socket) {
+#if defined(DISABLE_I2P) || defined(DISABLE_I2P_C)
     // Stub implementation when I2P is disabled
     (void)sam_socket;
     return -1;
 }
-#endif // DISABLE_I2P
-
-int sam_hello(int sam_socket) {
-#ifndef DISABLE_I2P
+#else
     if (sam_socket < 0) {
         return -1;
     }
@@ -174,15 +182,16 @@ int sam_hello(int sam_socket) {
     
     return 0;
 }
-#else // DISABLE_I2P is defined
-    // Stub implementation when I2P is disabled
-    (void)sam_socket;
-    return -1;
-}
-#endif // DISABLE_I2P
+#endif
 
 int sam_generate_destination(int sam_socket, i2p_destination_t *dest) {
-#ifndef DISABLE_I2P
+#if defined(DISABLE_I2P) || defined(DISABLE_I2P_C)
+    // Stub implementation when I2P is disabled
+    (void)sam_socket;
+    (void)dest;
+    return -1;
+}
+#else
     if (sam_socket < 0 || !dest) {
         return -1;
     }
@@ -228,16 +237,17 @@ int sam_generate_destination(int sam_socket, i2p_destination_t *dest) {
     
     return 0;
 }
-#else // DISABLE_I2P is defined
+#endif
+
+int sam_create_session(int sam_socket, const char *session_id, const i2p_destination_t *dest) {
+#if defined(DISABLE_I2P) || defined(DISABLE_I2P_C)
     // Stub implementation when I2P is disabled
     (void)sam_socket;
+    (void)session_id;
     (void)dest;
     return -1;
 }
-#endif // DISABLE_I2P
-
-int sam_create_session(int sam_socket, const char *session_id, const i2p_destination_t *dest) {
-#ifndef DISABLE_I2P
+#else
     if (sam_socket < 0 || !session_id || !dest) {
         return -1;
     }
@@ -269,17 +279,17 @@ int sam_create_session(int sam_socket, const char *session_id, const i2p_destina
     
     return 0;
 }
-#else // DISABLE_I2P is defined
+#endif
+
+int sam_lookup_name(int sam_socket, const char *name, i2p_destination_t *dest) {
+#if defined(DISABLE_I2P) || defined(DISABLE_I2P_C)
     // Stub implementation when I2P is disabled
     (void)sam_socket;
-    (void)session_id;
+    (void)name;
     (void)dest;
     return -1;
 }
-#endif // DISABLE_I2P
-
-int sam_lookup_name(int sam_socket, const char *name, i2p_destination_t *dest) {
-#ifndef DISABLE_I2P
+#else
     if (sam_socket < 0 || !name || !dest) {
         return -1;
     }
@@ -327,18 +337,20 @@ int sam_lookup_name(int sam_socket, const char *name, i2p_destination_t *dest) {
     
     return 0;
 }
-#else // DISABLE_I2P is defined
+#endif
+
+int sam_name_lookup(int sam_socket, const char *name, i2p_destination_t *dest) {
+#if defined(DISABLE_I2P) || defined(DISABLE_I2P_C)
     // Stub implementation when I2P is disabled
     (void)sam_socket;
     (void)name;
     (void)dest;
     return -1;
 }
-#endif // DISABLE_I2P
-
-int sam_name_lookup(int sam_socket, const char *name, i2p_destination_t *dest) {
+#else
     return sam_lookup_name(sam_socket, name, dest);
 }
+#endif
 
 /* I2P session management */
 int i2p_session_init(i2p_session_t *session, int is_server) {
@@ -834,16 +846,10 @@ int i2p_refresh_tunnels(i2p_session_t *session) {
 /* Anti-traffic analysis */
 int i2p_send_dummy_traffic(i2p_session_t *session) {
 #ifndef DISABLE_I2P
-    if (!session) {
-        return -1;
-    }
-    
-    // Generate random data
-    unsigned char dummy[MAX_PADDING];
-    randombytes_buf(dummy, sizeof(dummy));
-    
-    // Send the dummy data
-    return i2p_session_send(session, dummy, sizeof(dummy));
+    // Function removed - feature disabled
+    (void)session;
+    PEAR_LOG_DEBUG("Dummy traffic feature has been disabled");
+    return 0;
 }
 #else // DISABLE_I2P is defined
     // Stub implementation when I2P is disabled
@@ -854,17 +860,11 @@ int i2p_send_dummy_traffic(i2p_session_t *session) {
 
 int i2p_set_random_delay(i2p_session_t *session, int min_ms, int max_ms) {
 #ifndef DISABLE_I2P
-    if (!session) {
-        return -1;
-    }
-    
-    // This is a placeholder for setting random delay
-    // In a real implementation, we would store these values in the session
-    // and use them when sending messages
-    
+    // Function removed - feature disabled
+    (void)session;
     (void)min_ms;
     (void)max_ms;
-    
+    PEAR_LOG_DEBUG("Random delay feature has been disabled");
     return 0;
 }
 #else // DISABLE_I2P is defined

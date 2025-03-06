@@ -19,7 +19,7 @@ PeerManager::PeerManager() : localUsername(""), localDestination("") {
 
 // Initialize the peer manager
 bool PeerManager::initialize() {
-    LOG_STEP("Initializing peer manager");
+    PEAR_LOG_STEP("Initializing peer manager");
     return true;
 }
 
@@ -47,11 +47,11 @@ bool PeerManager::lookupPeer(const std::string& username, PeerInfo& peerInfo) {
         peerCache[username] = peer;
         peerInfo = peer;
         
-        LOG_INFO("Found peer via I2P naming: %s", username.c_str());
+        PEAR_LOG_INFO("Found peer via I2P naming: %s", username.c_str());
         return true;
     }
     
-    LOG_WARNING("Peer not found: %s", username.c_str());
+    PEAR_LOG_WARNING("Peer not found: %s", username.c_str());
     return false;
 }
 
@@ -64,13 +64,13 @@ bool PeerManager::registerUsername(const std::string& username, const std::strin
     // Create I2P session
     i2p_session_t session;
     if (i2p_session_init(&session, 0) != 0) {
-        LOG_ERROR("Failed to initialize I2P session for username registration");
+        PEAR_LOG_ERROR("Failed to initialize I2P session for username registration");
         return false;
     }
     
     // Register the username
     if (i2p_register_username(&session, username.c_str()) != 0) {
-        LOG_ERROR("Failed to register username: %s", username.c_str());
+        PEAR_LOG_ERROR("Failed to register username: %s", username.c_str());
         i2p_session_close(&session);
         return false;
     }
@@ -87,7 +87,7 @@ bool PeerManager::registerUsername(const std::string& username, const std::strin
     std::lock_guard<std::mutex> lock(peerMutex);
     peerCache[username] = peer;
     
-    LOG_INFO("Registered username: %s", username.c_str());
+    PEAR_LOG_INFO("Registered username: %s", username.c_str());
     return true;
 }
 
@@ -100,13 +100,13 @@ bool PeerManager::unregisterUsername(const std::string& username) {
     // Create I2P session
     i2p_session_t session;
     if (i2p_session_init(&session, 0) != 0) {
-        LOG_ERROR("Failed to initialize I2P session for username unregistration");
+        PEAR_LOG_ERROR("Failed to initialize I2P session for username unregistration");
         return false;
     }
     
     // Unregister the username
     if (i2p_unregister_username(&session, username.c_str()) != 0) {
-        LOG_ERROR("Failed to unregister username: %s", username.c_str());
+        PEAR_LOG_ERROR("Failed to unregister username: %s", username.c_str());
         i2p_session_close(&session);
         return false;
     }
@@ -120,7 +120,7 @@ bool PeerManager::unregisterUsername(const std::string& username) {
         peerCache.erase(username);
     }
     
-    LOG_INFO("Unregistered username: %s", username.c_str());
+    PEAR_LOG_INFO("Unregistered username: %s", username.c_str());
     return true;
 }
 
@@ -149,14 +149,14 @@ bool PeerManager::lookupI2PName(const std::string& name, std::string& destinatio
     // Create I2P session
     i2p_session_t session;
     if (i2p_session_init(&session, 0) != 0) {
-        LOG_ERROR("Failed to initialize I2P session for name lookup");
+        PEAR_LOG_ERROR("Failed to initialize I2P session for name lookup");
         return false;
     }
     
     // Look up the name
     i2p_destination_t dest;
     if (i2p_connect_to_username(&session, name.c_str()) != 0) {
-        LOG_DEBUG("Name not found in I2P naming: %s", name.c_str());
+        PEAR_LOG_DEBUG("Name not found in I2P naming: %s", name.c_str());
         i2p_session_close(&session);
         return false;
     }

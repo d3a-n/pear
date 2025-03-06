@@ -31,9 +31,9 @@ std::string promptUsername();
 bool promptServerOrClient();
 
 int main() {
-    // Initialize logger
-    Logger::getInstance().setLogLevel(LogLevel::INFO);
-    LOG_STEP("Pear starting up...");
+    // Initialize logger - Set to DEBUG for full verbosity
+    Logger::getInstance().setLogLevel(PearLogLevel::DEBUG);
+    PEAR_LOG_STEP("Pear starting up...");
     
     // Initialize random number generator
     RandomUtils::initialize();
@@ -49,22 +49,22 @@ int main() {
     WSADATA wsaData;
     int wsaResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (wsaResult != 0) {
-        LOG_ERROR("WSAStartup failed with error: %d", wsaResult);
+        PEAR_LOG_ERROR("WSAStartup failed with error: %d", wsaResult);
         return EXIT_NETWORK_ERROR;
     }
-    LOG_INFO("Winsock initialized");
+    PEAR_LOG_INFO("Winsock initialized");
 #endif
     
     // Initialize libsodium
     if (sodium_init() < 0) {
-        LOG_ERROR("Failed to initialize libsodium");
+        PEAR_LOG_ERROR("Failed to initialize libsodium");
         return EXIT_CRYPTO_ERROR;
     }
-    LOG_INFO("Libsodium initialized");
+    PEAR_LOG_INFO("Libsodium initialized");
     
     // Initialize peer manager
     if (!PeerManager::getInstance().initialize()) {
-        LOG_ERROR("Failed to initialize peer manager");
+        PEAR_LOG_ERROR("Failed to initialize peer manager");
         return EXIT_FAILURE;
     }
     
@@ -84,7 +84,7 @@ int main() {
     
     // Initialize chat session
     if (!session.initialize(username, isServer)) {
-        LOG_ERROR("Failed to initialize chat session");
+        PEAR_LOG_ERROR("Failed to initialize chat session");
         return EXIT_FAILURE;
     }
     
@@ -92,13 +92,13 @@ int main() {
     std::thread input(inputThread);
     
     if (isServer) {
-        LOG_STEP("Running in server mode, waiting for connection...");
-        LOG_INFO("Your I2P destination: %s", session.getLocalDestination().c_str());
+        PEAR_LOG_STEP("Running in server mode, waiting for connection...");
+        PEAR_LOG_INFO("Your I2P destination: %s", session.getLocalDestination().c_str());
         
         // Wait for connection request
         std::string requestUsername;
         if (!session.waitForConnectionRequest(requestUsername)) {
-            LOG_ERROR("Failed to receive connection request");
+            PEAR_LOG_ERROR("Failed to receive connection request");
             running = false;
             inputCV.notify_all();
             input.join();
@@ -118,47 +118,47 @@ int main() {
         // Accept or reject the connection
         if (!session.acceptConnection(accept)) {
             if (accept) {
-                LOG_ERROR("Failed to accept connection");
+                PEAR_LOG_ERROR("Failed to accept connection");
                 running = false;
                 inputCV.notify_all();
                 input.join();
                 return EXIT_NETWORK_ERROR;
             } else {
-                LOG_INFO("Connection rejected");
+                PEAR_LOG_INFO("Connection rejected");
                 return EXIT_SUCCESS;
             }
         }
         
         if (accept) {
-            LOG_INFO("Connected to %s", session.getRemoteUsername().c_str());
+            PEAR_LOG_INFO("Connected to %s", session.getRemoteUsername().c_str());
         } else {
-            LOG_INFO("Connection rejected");
+            PEAR_LOG_INFO("Connection rejected");
             running = false;
             inputCV.notify_all();
             input.join();
             return EXIT_SUCCESS;
         }
     } else {
-        LOG_STEP("Running in client mode");
-        LOG_INFO("Your I2P destination: %s", session.getLocalDestination().c_str());
+        PEAR_LOG_STEP("Running in client mode");
+        PEAR_LOG_INFO("Your I2P destination: %s", session.getLocalDestination().c_str());
         
         // Prompt for peer username
         std::string peerUsername;
         std::cout << "Enter peer username: ";
         std::getline(std::cin, peerUsername);
         
-        LOG_STEP("Connecting to %s...", peerUsername.c_str());
+        PEAR_LOG_STEP("Connecting to %s...", peerUsername.c_str());
         
         // Connect to peer
         if (!session.connectToUsername(peerUsername)) {
-            LOG_ERROR("Failed to connect to %s", peerUsername.c_str());
+            PEAR_LOG_ERROR("Failed to connect to %s", peerUsername.c_str());
             running = false;
             inputCV.notify_all();
             input.join();
             return EXIT_NETWORK_ERROR;
         }
         
-        LOG_INFO("Connected to %s", session.getRemoteUsername().c_str());
+        PEAR_LOG_INFO("Connected to %s", session.getRemoteUsername().c_str());
     }
     
     // Main loop
@@ -202,13 +202,13 @@ int main() {
     WSACleanup();
 #endif
     
-    LOG_STEP("Pear shutting down...");
+    PEAR_LOG_STEP("Pear shutting down...");
     return EXIT_SUCCESS;
 }
 
 // Signal handler
 void handleSignal(int signal) {
-    LOG_INFO("Received signal %d", signal);
+    PEAR_LOG_INFO("Received signal %d", signal);
     running = false;
     inputCV.notify_all();
 }

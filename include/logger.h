@@ -6,8 +6,24 @@
 #include <cstdio>  // For snprintf
 #include <cstdarg> // For variadic functions
 
+// C compatibility
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// C-compatible logging functions
+void pear_log_debug(const char* format, ...);
+void pear_log_info(const char* format, ...);
+void pear_log_step(const char* format, ...);
+void pear_log_warning(const char* format, ...);
+void pear_log_error(const char* format, ...);
+
+#ifdef __cplusplus
+}
+#endif
+
 // Log levels
-enum class LogLevel {
+enum class PearLogLevel {
     DEBUG,
     INFO,
     STEP,
@@ -26,7 +42,7 @@ public:
     Logger& operator=(const Logger&) = delete;
 
     // Set the minimum log level
-    void setLogLevel(LogLevel level);
+    void setLogLevel(PearLogLevel level);
 
     // Log methods (string-based)
     void debug(const std::string& message);
@@ -56,13 +72,13 @@ private:
     Logger();
     
     // Current log level
-    LogLevel currentLevel;
+    PearLogLevel currentLevel;
     
     // Mutex for thread safety
     std::mutex logMutex;
     
     // Internal log method
-    void log(LogLevel level, const std::string& message);
+    void log(PearLogLevel level, const std::string& message);
     
     // Format a string with variable arguments
     template<typename... Args>
@@ -70,45 +86,53 @@ private:
 };
 
 // Convenience macros for logging
-#define LOG_DEBUG(...)   Logger::getInstance().debug(__VA_ARGS__)
-#define LOG_INFO(...)    Logger::getInstance().info(__VA_ARGS__)
-#define LOG_STEP(...)    Logger::getInstance().step(__VA_ARGS__)
-#define LOG_WARNING(...) Logger::getInstance().warning(__VA_ARGS__)
-#define LOG_ERROR(...)   Logger::getInstance().error(__VA_ARGS__)
+#ifdef __cplusplus
+#define PEAR_LOG_DEBUG(...)   Logger::getInstance().debug(__VA_ARGS__)
+#define PEAR_LOG_INFO(...)    Logger::getInstance().info(__VA_ARGS__)
+#define PEAR_LOG_STEP(...)    Logger::getInstance().step(__VA_ARGS__)
+#define PEAR_LOG_WARNING(...) Logger::getInstance().warning(__VA_ARGS__)
+#define PEAR_LOG_ERROR(...)   Logger::getInstance().error(__VA_ARGS__)
+#else
+#define PEAR_LOG_DEBUG(...)   pear_log_debug(__VA_ARGS__)
+#define PEAR_LOG_INFO(...)    pear_log_info(__VA_ARGS__)
+#define PEAR_LOG_STEP(...)    pear_log_step(__VA_ARGS__)
+#define PEAR_LOG_WARNING(...) pear_log_warning(__VA_ARGS__)
+#define PEAR_LOG_ERROR(...)   pear_log_error(__VA_ARGS__)
+#endif
 
 // Template implementations
 template<typename... Args>
 void Logger::debug(const char* format, Args... args) {
-    if (currentLevel <= LogLevel::DEBUG) {
-        log(LogLevel::DEBUG, formatString(format, args...));
+    if (currentLevel <= PearLogLevel::DEBUG) {
+        log(PearLogLevel::DEBUG, formatString(format, args...));
     }
 }
 
 template<typename... Args>
 void Logger::info(const char* format, Args... args) {
-    if (currentLevel <= LogLevel::INFO) {
-        log(LogLevel::INFO, formatString(format, args...));
+    if (currentLevel <= PearLogLevel::INFO) {
+        log(PearLogLevel::INFO, formatString(format, args...));
     }
 }
 
 template<typename... Args>
 void Logger::step(const char* format, Args... args) {
-    if (currentLevel <= LogLevel::STEP) {
-        log(LogLevel::STEP, formatString(format, args...));
+    if (currentLevel <= PearLogLevel::STEP) {
+        log(PearLogLevel::STEP, formatString(format, args...));
     }
 }
 
 template<typename... Args>
 void Logger::warning(const char* format, Args... args) {
-    if (currentLevel <= LogLevel::WARNING) {
-        log(LogLevel::WARNING, formatString(format, args...));
+    if (currentLevel <= PearLogLevel::WARNING) {
+        log(PearLogLevel::WARNING, formatString(format, args...));
     }
 }
 
 template<typename... Args>
 void Logger::error(const char* format, Args... args) {
-    if (currentLevel <= LogLevel::ERROR_LEVEL) {
-        log(LogLevel::ERROR_LEVEL, formatString(format, args...));
+    if (currentLevel <= PearLogLevel::ERROR_LEVEL) {
+        log(PearLogLevel::ERROR_LEVEL, formatString(format, args...));
     }
 }
 

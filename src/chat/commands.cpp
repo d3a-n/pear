@@ -28,12 +28,12 @@ bool CommandProcessor::processCommand(const std::string& commandStr, ChatSession
     // Look up the command
     auto it = commands.find(cmd);
     if (it == commands.end()) {
-        LOG_WARNING("Unknown command: %s", cmd.c_str());
+        PEAR_LOG_WARNING("Unknown command: %s", cmd.c_str());
         return false;
     }
     
     // Execute the command
-    LOG_DEBUG("Executing command: %s", cmd.c_str());
+    PEAR_LOG_DEBUG("Executing command: %s", cmd.c_str());
     return it->second.handler(args, session);
 }
 
@@ -47,7 +47,7 @@ void CommandProcessor::registerCommand(const std::string& name,
     info.handler = handler;
     
     commands[name] = info;
-    LOG_DEBUG("Registered command: %s", name.c_str());
+    PEAR_LOG_DEBUG("Registered command: %s", name.c_str());
 }
 
 // Get help text for all commands
@@ -118,12 +118,12 @@ bool CommandProcessor::pingCommand(const std::vector<std::string>& args, ChatSes
     (void)args; // Unused parameter
     
     if (!session) {
-        LOG_ERROR("No active chat session");
+        PEAR_LOG_ERROR("No active chat session");
         return false;
     }
     
     if (!session->isConnected()) {
-        LOG_ERROR("Not connected to a peer");
+        PEAR_LOG_ERROR("Not connected to a peer");
         return false;
     }
     
@@ -135,12 +135,12 @@ bool CommandProcessor::disconnectCommand(const std::vector<std::string>& args, C
     (void)args; // Unused parameter
     
     if (!session) {
-        LOG_ERROR("No active chat session");
+        PEAR_LOG_ERROR("No active chat session");
         return false;
     }
     
     if (!session->isConnected()) {
-        LOG_ERROR("Not connected to a peer");
+        PEAR_LOG_ERROR("Not connected to a peer");
         return false;
     }
     
@@ -153,12 +153,12 @@ bool CommandProcessor::refreshCommand(const std::vector<std::string>& args, Chat
     (void)args; // Unused parameter
     
     if (!session) {
-        LOG_ERROR("No active chat session");
+        PEAR_LOG_ERROR("No active chat session");
         return false;
     }
     
     if (!session->isConnected()) {
-        LOG_ERROR("Not connected to a peer");
+        PEAR_LOG_ERROR("Not connected to a peer");
         return false;
     }
     

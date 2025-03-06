@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 project(pear LANGUAGES C CXX)
 
+# Add cmake modules path
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 # Use the C11 and C++17 standards
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -11,6 +14,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
+
+# Build options
+option(USE_SYSTEM_SODIUM "Use system-installed libsodium instead of embedded" ON)
+option(USE_SYSTEM_I2PD "Use system-installed i2pd instead of embedded" OFF)
+option(DISABLE_I2P "Disable I2P support" OFF)
+option(ENABLE_VERBOSE_DEBUG "Enable verbose debug output" ON)
+set(LIBSODIUM_CFLAGS "" CACHE STRING "Additional CFLAGS for libsodium")
 
 # Enable compiler warnings.
 if (MSVC)
@@ -27,7 +37,7 @@ set(SRC_FILES
     src/chat/serialization.c
     src/crypto/crypto.c
     src/net/peer.cpp
-    src/net/i2p.c
+    # src/net/i2p.c - Removed to avoid duplicate definitions with i2p_wrapper.cpp
     src/net/i2p_wrapper.cpp
     src/logger.cpp
     src/common.c
@@ -36,6 +46,12 @@ set(SRC_FILES
 
 # Create the executable.
 add_executable(pear ${SRC_FILES})
+
+# Enable verbose debug if option is turned on
+if(ENABLE_VERBOSE_DEBUG)
+    message(STATUS "Verbose debug output enabled")
+    target_compile_definitions(pear PRIVATE ENABLE_VERBOSE_DEBUG)
+endif()
 
 # Include directories.
 target_include_directories(pear PRIVATE 
@@ -48,24 +64,54 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 target_link_libraries(pear PRIVATE Threads::Threads)
 
-# Build embedded libsodium
-message(STATUS "Building embedded libsodium")
-add_subdirectory(${CMAKE_SOURCE_DIR}/libsodium-replaceassubmodule)
-target_link_libraries(pear PRIVATE sodium)
+# Handle libsodium dependency
+if(USE_SYSTEM_SODIUM)
+    message(STATUS "Using system-installed libsodium")
+    find_package(Sodium REQUIRED)
+    target_link_libraries(pear PRIVATE Sodium::Sodium)
+else()
+    message(STATUS "Building embedded libsodium")
+    
+    # Pass additional CFLAGS to libsodium if specified
+    if(NOT "${LIBSODIUM_CFLAGS}" STREQUAL "")
+        message(STATUS "Using additional CFLAGS for libsodium: ${LIBSODIUM_CFLAGS}")
+        set(LIBSODIUM_CFLAGS "${LIBSODIUM_CFLAGS}" CACHE STRING "Additional CFLAGS for libsodium" FORCE)
+    endif()
+    
+    # Add SODIUM_STATIC definition to the main project
+    target_compile_definitions(pear PRIVATE SODIUM_STATIC)
+    
+    # Use add_subdirectory to properly build libsodium
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libsodium)
+    
+    # Link the sodium library to the main executable
+    target_link_libraries(pear PRIVATE sodium)
+    
+    # Add include directories for the main executable
+    target_include_directories(pear PRIVATE
+        ${CMAKE_SOURCE_DIR}/libsodium/src/libsodium/include
+        ${CMAKE_SOURCE_DIR}/libsodium/src/libsodium/include/sodium
+    )
+endif()
 
-# Build embedded I2PD
-message(STATUS "Building embedded I2PD")
-add_subdirectory(${CMAKE_SOURCE_DIR}/i2pd)
-target_link_libraries(pear PRIVATE i2pd)
-
-# Disable i18n support to avoid undefined reference errors
-target_compile_definitions(pear PRIVATE DISABLE_I18N)
-
-# Option to disable I2P support (useful for cross-compilation)
-option(DISABLE_I2P "Disable I2P support for Windows build" OFF)
+# Handle i2pd dependency
 if(DISABLE_I2P)
     message(STATUS "I2P support explicitly disabled")
     target_compile_definitions(pear PRIVATE DISABLE_I2P)
+elseif(USE_SYSTEM_I2PD)
+    message(STATUS "Using system-installed i2pd")
+    find_package(I2PD REQUIRED)
+    target_link_libraries(pear PRIVATE I2PD::I2PD)
+    
+    # Disable i18n support to avoid undefined reference errors
+    target_compile_definitions(pear PRIVATE DISABLE_I18N)
+else()
+    message(STATUS "Building embedded I2PD")
+    add_subdirectory(${CMAKE_SOURCE_DIR}/i2pd)
+    target_link_libraries(pear PRIVATE i2pd)
+    
+    # Disable i18n support to avoid undefined reference errors
+    target_compile_definitions(pear PRIVATE DISABLE_I18N)
 endif()
 
 # Platform-specific settings.

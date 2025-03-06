@@ -87,7 +87,7 @@ private:
     
     // Threads
     std::thread receiveThread;
-    std::thread dummyTrafficThread;
+    // dummyTrafficThread removed
     
     // Thread synchronization
     std::mutex sessionMutex;
@@ -95,7 +95,7 @@ private:
     
     // Private methods
     void receiveLoop();
-    void dummyTrafficLoop();
+    // dummyTrafficLoop method removed
     void processIncomingMessage(const std::vector<uint8_t>& data);
     bool sendRawMessage(uint8_t type, const std::vector<uint8_t>& data);
     void notifyStatus(const std::string& status);

@@ -4,9 +4,58 @@
 #include <ctime>
 #include <sstream>
 #include <mutex>
+#include <cstdarg>
+
+// C-compatible logging functions
+extern "C" {
+    void pear_log_debug(const char* format, ...) {
+        va_list args;
+        va_start(args, format);
+        char buffer[1024];
+        vsnprintf(buffer, sizeof(buffer), format, args);
+        va_end(args);
+        Logger::getInstance().debug(buffer);
+    }
+
+    void pear_log_info(const char* format, ...) {
+        va_list args;
+        va_start(args, format);
+        char buffer[1024];
+        vsnprintf(buffer, sizeof(buffer), format, args);
+        va_end(args);
+        Logger::getInstance().info(buffer);
+    }
+
+    void pear_log_step(const char* format, ...) {
+        va_list args;
+        va_start(args, format);
+        char buffer[1024];
+        vsnprintf(buffer, sizeof(buffer), format, args);
+        va_end(args);
+        Logger::getInstance().step(buffer);
+    }
+
+    void pear_log_warning(const char* format, ...) {
+        va_list args;
+        va_start(args, format);
+        char buffer[1024];
+        vsnprintf(buffer, sizeof(buffer), format, args);
+        va_end(args);
+        Logger::getInstance().warning(buffer);
+    }
+
+    void pear_log_error(const char* format, ...) {
+        va_list args;
+        va_start(args, format);
+        char buffer[1024];
+        vsnprintf(buffer, sizeof(buffer), format, args);
+        va_end(args);
+        Logger::getInstance().error(buffer);
+    }
+}
 
 // Constructor
-Logger::Logger() : currentLevel(LogLevel::INFO) {}
+Logger::Logger() : currentLevel(PearLogLevel::INFO) {}
 
 // Singleton instance
 Logger& Logger::getInstance() {
@@ -15,44 +64,44 @@ Logger& Logger::getInstance() {
 }
 
 // Set the minimum log level
-void Logger::setLogLevel(LogLevel level) {
+void Logger::setLogLevel(PearLogLevel level) {
     std::lock_guard<std::mutex> lock(logMutex);
     currentLevel = level;
 }
 
 // Log methods
 void Logger::debug(const std::string& message) {
-    if (currentLevel <= LogLevel::DEBUG) {
-        log(LogLevel::DEBUG, message);
+    if (currentLevel <= PearLogLevel::DEBUG) {
+        log(PearLogLevel::DEBUG, message);
     }
 }
 
 void Logger::info(const std::string& message) {
-    if (currentLevel <= LogLevel::INFO) {
-        log(LogLevel::INFO, message);
+    if (currentLevel <= PearLogLevel::INFO) {
+        log(PearLogLevel::INFO, message);
     }
 }
 
 void Logger::step(const std::string& message) {
-    if (currentLevel <= LogLevel::STEP) {
-        log(LogLevel::STEP, message);
+    if (currentLevel <= PearLogLevel::STEP) {
+        log(PearLogLevel::STEP, message);
     }
 }
 
 void Logger::warning(const std::string& message) {
-    if (currentLevel <= LogLevel::WARNING) {
-        log(LogLevel::WARNING, message);
+    if (currentLevel <= PearLogLevel::WARNING) {
+        log(PearLogLevel::WARNING, message);
     }
 }
 
 void Logger::error(const std::string& message) {
-    if (currentLevel <= LogLevel::ERROR_LEVEL) {
-        log(LogLevel::ERROR_LEVEL, message);
+    if (currentLevel <= PearLogLevel::ERROR_LEVEL) {
+        log(PearLogLevel::ERROR_LEVEL, message);
     }
 }
 
 // Internal log method
-void Logger::log(LogLevel level, const std::string& message) {
+void Logger::log(PearLogLevel level, const std::string& message) {
     std::lock_guard<std::mutex> lock(logMutex);
     
     // Get current time
@@ -68,19 +117,19 @@ void Logger::log(LogLevel level, const std::string& message) {
     // Get level string
     std::string levelStr;
     switch (level) {
-        case LogLevel::DEBUG:
+        case PearLogLevel::DEBUG:
             levelStr = "DEBUG";
             break;
-        case LogLevel::INFO:
+        case PearLogLevel::INFO:
             levelStr = "INFO";
             break;
-        case LogLevel::STEP:
+        case PearLogLevel::STEP:
             levelStr = "STEP";
             break;
-        case LogLevel::WARNING:
+        case PearLogLevel::WARNING:
             levelStr = "WARNING";
             break;
-        case LogLevel::ERROR_LEVEL:
+        case PearLogLevel::ERROR_LEVEL:
             levelStr = "ERROR";
             break;
         default:
@@ -89,6 +138,6 @@ void Logger::log(LogLevel level, const std::string& message) {
     }
     
     // Output to console
-    std::ostream& out = (level >= LogLevel::WARNING) ? std::cerr : std::cout;
+    std::ostream& out = (level >= PearLogLevel::WARNING) ? std::cerr : std::cout;
     out << "[" << ss.str() << "] [" << levelStr << "] " << message << std::endl;
 }

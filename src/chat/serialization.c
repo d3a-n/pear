@@ -40,14 +40,10 @@ int serialize_text_message(const char *text, size_t text_len,
     // Copy the text
     memcpy(message->data + 1 + username_len, text, text_len);
     
-    // Set the data length
+    // Set the data length (no padding)
     message->data_len = data_size;
     message->header.length = data_size;
-    
-    // Add random padding
-    size_t padded_size = add_random_padding(message->data, data_size, data_size + MAX_PADDING);
-    message->data_len = padded_size;
-    message->header.padding_len = padded_size - data_size;
+    message->header.padding_len = 0;
 
     return 0;
 }
@@ -119,13 +115,10 @@ int serialize_ratchet_message(const unsigned char *ratchet_data, size_t ratchet_
     // Copy the ratchet data
     memcpy(message->data, ratchet_data, ratchet_len);
     
-    // Set the data length
+    // Set the data length (no padding)
     message->data_len = ratchet_len;
-    
-    // Add random padding
-    size_t padded_size = add_random_padding(message->data, ratchet_len, ratchet_len + MAX_PADDING);
-    message->data_len = padded_size;
-    message->header.padding_len = padded_size - ratchet_len;
+    message->header.length = ratchet_len;
+    message->header.padding_len = 0;
 
     return 0;
 }

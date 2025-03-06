@@ -424,53 +424,18 @@ int derive_keys(const unsigned char *input, size_t input_len,
     return 0;
 }
 
-/* Add random padding to a message */
+/* Add random padding to a message - No-op version (feature removed) */
 size_t add_random_padding(unsigned char *buffer, size_t content_len, size_t max_len)
 {
-    if (!buffer || content_len >= max_len) {
-        return content_len;
-    }
-
-    // Determine the amount of padding to add (between MIN_PADDING and MAX_PADDING)
-    size_t available_space = max_len - content_len;
-    size_t padding_len = MIN_PADDING;
-    
-    if (available_space > MIN_PADDING) {
-        // Add random padding between MIN_PADDING and available_space
-        padding_len += randombytes_uniform(available_space - MIN_PADDING + 1);
-    }
-
-    // Ensure we don't exceed the buffer
-    if (content_len + padding_len > max_len) {
-        padding_len = max_len - content_len;
-    }
-
-    // Add the padding length at the end of the content
-    buffer[content_len] = (unsigned char)padding_len;
-    
-    // Fill the padding with random data
-    randombytes_buf(buffer + content_len + 1, padding_len - 1);
-    
-    return content_len + padding_len;
+    // Feature removed - return content length with no padding
+    return content_len;
 }
 
-/* Remove padding from a message */
+/* Remove padding from a message - No-op version (feature removed) */
 size_t remove_padding(unsigned char *buffer, size_t buffer_len)
 {
-    if (!buffer || buffer_len == 0) {
-        return 0;
-    }
-
-    // Get the padding length from the last byte
-    size_t padding_len = buffer[buffer_len - 1];
-    
-    // Validate the padding length
-    if (padding_len == 0 || padding_len > buffer_len) {
-        return buffer_len; // Invalid padding, return the original length
-    }
-    
-    // Return the content length (without padding)
-    return buffer_len - padding_len;
+    // Feature removed - return buffer length unchanged
+    return buffer_len;
 }
 
 /* Securely wipe sensitive data */

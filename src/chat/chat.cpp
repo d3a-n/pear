@@ -13,7 +13,7 @@ ChatSession::ChatSession()
     : isServer(false), connected(false), running(false),
       onMessage(nullptr), onStatus(nullptr), onError(nullptr) {
     
-    LOG_DEBUG("ChatSession created");
+    PEAR_LOG_DEBUG("ChatSession created");
 }
 
 // Destructor
@@ -21,12 +21,12 @@ ChatSession::~ChatSession() {
     // Ensure we're disconnected
     disconnect();
     
-    LOG_DEBUG("ChatSession destroyed");
+    PEAR_LOG_DEBUG("ChatSession destroyed");
 }
 
 // Initialize the chat session
 bool ChatSession::initialize(const std::string& username, bool server) {
-    LOG_STEP("Initializing chat session as %s", server ? "server" : "client");
+    PEAR_LOG_STEP("Initializing chat session as %s", server ? "server" : "client");
     
     // Set local username
     localUsername = username;
@@ -56,7 +56,7 @@ bool ChatSession::initialize(const std::string& username, bool server) {
 
 // Connect to a peer by username
 bool ChatSession::connectToUsername(const std::string& username) {
-    LOG_STEP("Connecting to peer: %s", username.c_str());
+    PEAR_LOG_STEP("Connecting to peer: %s", username.c_str());
     
     // Check if already connected
     if (connected) {
@@ -124,8 +124,8 @@ bool ChatSession::connectToUsername(const std::string& username) {
     // Start receive thread
     receiveThread = std::thread(&ChatSession::receiveLoop, this);
     
-    // Start dummy traffic thread
-    dummyTrafficThread = std::thread(&ChatSession::dummyTrafficLoop, this);
+    // Dummy traffic thread removed
+    PEAR_LOG_DEBUG("Dummy traffic generation disabled");
     
     notifyStatus("Connected to " + username);
     return true;
@@ -133,7 +133,7 @@ bool ChatSession::connectToUsername(const std::string& username) {
 
 // Wait for a connection request
 bool ChatSession::waitForConnectionRequest(std::string& requestUsername) {
-    LOG_STEP("Waiting for connection request");
+    PEAR_LOG_STEP("Waiting for connection request");
     
     // Check if already connected
     if (connected) {
@@ -170,7 +170,7 @@ bool ChatSession::waitForConnectionRequest(std::string& requestUsername) {
 // Accept or reject a connection
 bool ChatSession::acceptConnection(bool accept) {
     if (!accept) {
-        LOG_STEP("Rejecting connection from %s", remoteUsername.c_str());
+        PEAR_LOG_STEP("Rejecting connection from %s", remoteUsername.c_str());
         
         // Send rejection message
         const char* reject_msg = "REJECTED";
@@ -183,7 +183,7 @@ bool ChatSession::acceptConnection(bool accept) {
         return true;
     }
     
-    LOG_STEP("Accepting connection from %s", remoteUsername.c_str());
+    PEAR_LOG_STEP("Accepting connection from %s", remoteUsername.c_str());
     
     // Send acceptance message
     const char* accept_msg = "ACCEPTED";
@@ -217,8 +217,8 @@ bool ChatSession::acceptConnection(bool accept) {
     // Start receive thread
     receiveThread = std::thread(&ChatSession::receiveLoop, this);
     
-    // Start dummy traffic thread
-    dummyTrafficThread = std::thread(&ChatSession::dummyTrafficLoop, this);
+    // Dummy traffic thread removed
+    PEAR_LOG_DEBUG("Dummy traffic generation disabled");
     
     notifyStatus("Connected to " + remoteUsername);
     return true;
@@ -226,7 +226,7 @@ bool ChatSession::acceptConnection(bool accept) {
 
 // Disconnect from the peer
 void ChatSession::disconnect() {
-    LOG_STEP("Disconnecting");
+    PEAR_LOG_STEP("Disconnecting");
     
     // Check if connected
     if (!connected) {
@@ -260,10 +260,6 @@ void ChatSession::disconnect() {
         receiveThread.join();
     }
     
-    if (dummyTrafficThread.joinable()) {
-        dummyTrafficThread.join();
-    }
-    
     // Close the I2P session
     i2p_session_close(&i2pSession);
     
@@ -283,7 +279,7 @@ bool ChatSession::isConnected() const {
 
 // Send a message
 bool ChatSession::sendMessage(const std::string& message) {
-    LOG_DEBUG("Sending message: %s", message.c_str());
+    PEAR_LOG_DEBUG("Sending message: %s", message.c_str());
     
     // Check if connected
     if (!connected) {
@@ -351,7 +347,7 @@ bool ChatSession::sendMessage(const std::string& message) {
 
 // Send a ping
 bool ChatSession::sendPing() {
-    LOG_DEBUG("Sending ping");
+    PEAR_LOG_DEBUG("Sending ping");
     
     // Check if connected
     if (!connected) {
@@ -394,7 +390,7 @@ bool ChatSession::sendPing() {
 
 // Refresh tunnels
 bool ChatSession::refreshTunnels() {
-    LOG_STEP("Refreshing I2P tunnels");
+    PEAR_LOG_STEP("Refreshing I2P tunnels");
     
     // Check if connected
     if (!connected) {
@@ -449,7 +445,7 @@ std::string ChatSession::getRemoteDestination() const {
 
 // Receive loop
 void ChatSession::receiveLoop() {
-    LOG_DEBUG("Receive thread started");
+    PEAR_LOG_DEBUG("Receive thread started");
     
     unsigned char buffer[BUFFER_SIZE];
     
@@ -472,66 +468,10 @@ void ChatSession::receiveLoop() {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     
-    LOG_DEBUG("Receive thread ended");
+    PEAR_LOG_DEBUG("Receive thread ended");
 }
 
-// Dummy traffic loop
-void ChatSession::dummyTrafficLoop() {
-    LOG_DEBUG("Dummy traffic thread started");
-    
-    // Random number generator
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> delay_dist(5000, 15000); // 5-15 seconds
-    
-    while (running && connected) {
-        // Sleep for a random amount of time
-        std::this_thread::sleep_for(std::chrono::milliseconds(delay_dist(gen)));
-        
-        // Send dummy traffic if still connected
-        if (running && connected) {
-            // Create dummy message
-            serialized_message_t message;
-            if (serialize_dummy_message(&message) == 0) {
-                // Calculate total message size
-                size_t total_size = sizeof(message_header_t);
-                if (message.data) {
-                    total_size += message.data_len;
-                }
-                
-                // Allocate buffer for the complete message
-                unsigned char* msg_buffer = new unsigned char[total_size];
-                if (msg_buffer) {
-                    // Copy header
-                    memcpy(msg_buffer, &message.header, sizeof(message_header_t));
-                    
-                    // Copy data if present
-                    if (message.data && message.data_len > 0) {
-                        memcpy(msg_buffer + sizeof(message_header_t), message.data, message.data_len);
-                    }
-                    
-                    // Encrypt the message
-                    unsigned char encrypted[BUFFER_SIZE];
-                    size_t encrypted_len = 0;
-                    
-                    if (ratchet_encrypt(&sessionKeys.ratchet, msg_buffer, total_size, 
-                                       encrypted, &encrypted_len) == 0) {
-                        // Send the encrypted message
-                        i2p_session_send(&i2pSession, encrypted, encrypted_len);
-                    }
-                    
-                    // Clean up
-                    delete[] msg_buffer;
-                }
-                
-                // Free the message
-                free_serialized_message(&message);
-            }
-        }
-    }
-    
-    LOG_DEBUG("Dummy traffic thread ended");
-}
+// Dummy traffic loop removed
 
 // Process incoming message
 void ChatSession::processIncomingMessage(const std::vector<uint8_t>& data) {
@@ -586,7 +526,7 @@ void ChatSession::processIncomingMessage(const std::vector<uint8_t>& data) {
         }
         
         case MSG_TYPE_PING: {
-            LOG_DEBUG("Received ping, sending pong");
+            PEAR_LOG_DEBUG("Received ping, sending pong");
             
             // Send pong
             serialized_message_t pong;
@@ -610,7 +550,7 @@ void ChatSession::processIncomingMessage(const std::vector<uint8_t>& data) {
         }
         
         case MSG_TYPE_PONG: {
-            LOG_DEBUG("Received pong");
+            PEAR_LOG_DEBUG("Received pong");
             
             // Create message object
             Message msg;
@@ -627,7 +567,7 @@ void ChatSession::processIncomingMessage(const std::vector<uint8_t>& data) {
         }
         
         case MSG_TYPE_RATCHET: {
-            LOG_DEBUG("Received ratchet update");
+            PEAR_LOG_DEBUG("Received ratchet update");
             
             // Extract ratchet data
             unsigned char ratchet_data[BUFFER_SIZE];
@@ -635,7 +575,7 @@ void ChatSession::processIncomingMessage(const std::vector<uint8_t>& data) {
             
             if (extract_ratchet_data(&message, ratchet_data, &ratchet_len) == 0) {
                 // TODO: Update ratchet
-                LOG_DEBUG("Ratchet update not implemented yet");
+                PEAR_LOG_DEBUG("Ratchet update not implemented yet");
             } else {
                 notifyError("Failed to extract ratchet data");
             }
@@ -643,12 +583,12 @@ void ChatSession::processIncomingMessage(const std::vector<uint8_t>& data) {
         }
         
         case MSG_TYPE_DUMMY: {
-            LOG_DEBUG("Received dummy traffic");
+            PEAR_LOG_DEBUG("Received dummy traffic");
             break;
         }
         
         case MSG_TYPE_DISCONNECT: {
-            LOG_DEBUG("Received disconnect message");
+            PEAR_LOG_DEBUG("Received disconnect message");
             
             // Notify status
             notifyStatus("Peer disconnected");
@@ -659,7 +599,7 @@ void ChatSession::processIncomingMessage(const std::vector<uint8_t>& data) {
         }
         
         default: {
-            LOG_WARNING("Received unknown message type: %d", message.header.type);
+            PEAR_LOG_WARNING("Received unknown message type: %d", message.header.type);
             break;
         }
     }
@@ -727,7 +667,7 @@ bool ChatSession::sendRawMessage(uint8_t type, const std::vector<uint8_t>& data)
 
 // Notify status
 void ChatSession::notifyStatus(const std::string& status) {
-    LOG_INFO("%s", status.c_str());
+    PEAR_LOG_INFO("%s", status.c_str());
     if (onStatus) {
         onStatus(status);
     }
@@ -735,7 +675,7 @@ void ChatSession::notifyStatus(const std::string& status) {
 
 // Notify error
 void ChatSession::notifyError(const std::string& error) {
-    LOG_ERROR("%s", error.c_str());
+    PEAR_LOG_ERROR("%s", error.c_str());
     if (onError) {
         onError(error);
     }

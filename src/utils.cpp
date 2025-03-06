@@ -155,7 +155,7 @@ namespace RandomUtils {
             rng.seed(seed);
             initialized = true;
             
-            LOG_DEBUG("Random number generator initialized");
+            PEAR_LOG_DEBUG("Random number generator initialized");
         }
     }
     
@@ -339,7 +339,7 @@ namespace SystemUtils {
         // Open the file for binary writing
         std::ofstream file(path, std::ios::binary | std::ios::out);
         if (!file) {
-            LOG_ERROR("Failed to open file for secure deletion: %s", path.c_str());
+            PEAR_LOG_ERROR("Failed to open file for secure deletion: %s", path.c_str());
             return false;
         }
         
@@ -354,7 +354,7 @@ namespace SystemUtils {
         
         // Overwrite with random data (3 passes)
         for (int pass = 0; pass < 3; ++pass) {
-            LOG_DEBUG("Secure delete pass %d for file: %s", pass + 1, path.c_str());
+            PEAR_LOG_DEBUG("Secure delete pass %d for file: %s", pass + 1, path.c_str());
             
             file.seekp(0, std::ios::beg);
             std::streampos remaining = fileSize;
@@ -369,7 +369,7 @@ namespace SystemUtils {
                 file.write(reinterpret_cast<char*>(buffer), bytesToWrite);
                 
                 if (!file) {
-                    LOG_ERROR("Failed to write during secure deletion: %s", path.c_str());
+                    PEAR_LOG_ERROR("Failed to write during secure deletion: %s", path.c_str());
                     file.close();
                     return false;
                 }
@@ -386,11 +386,11 @@ namespace SystemUtils {
         
         // Delete the file
         if (std::remove(path.c_str()) != 0) {
-            LOG_ERROR("Failed to remove file after secure deletion: %s", path.c_str());
+            PEAR_LOG_ERROR("Failed to remove file after secure deletion: %s", path.c_str());
             return false;
         }
         
-        LOG_DEBUG("File securely deleted: %s", path.c_str());
+        PEAR_LOG_DEBUG("File securely deleted: %s", path.c_str());
         return true;
     }
     

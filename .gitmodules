@@ -1,3 +1,6 @@
 [submodule "i2pd"]
 	path = i2pd
 	url = https://github.com/PurpleI2P/i2pd.git
+[submodule "libsodium"]
+	path = libsodium
+	url = https://github.com/jedisct1/libsodium.git

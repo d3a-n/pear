@@ -28,6 +28,7 @@ set(SRC_FILES
     src/crypto/crypto.c
     src/net/peer.cpp
     src/net/i2p.c
+    src/net/i2p_wrapper.cpp
     src/logger.cpp
     src/common.c
     src/utils.cpp
@@ -49,7 +50,7 @@ target_link_libraries(pear PRIVATE Threads::Threads)
 
 # Build embedded libsodium
 message(STATUS "Building embedded libsodium")
-add_subdirectory(${CMAKE_SOURCE_DIR}/libsodium)
+add_subdirectory(${CMAKE_SOURCE_DIR}/libsodium-replaceassubmodule)
 target_link_libraries(pear PRIVATE sodium)
 
 # Build embedded I2PD

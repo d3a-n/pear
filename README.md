@@ -1,5 +1,7 @@
 uses UDP hole punching, and triple diffie hellman, along with a wide variety of encryption methods. 
 
+cross platform(?)
+
 list of commands:
 
 `/help` – displays commands
